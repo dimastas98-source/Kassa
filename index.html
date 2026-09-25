@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0f1720"/>
+  <title>Касса экспедиторов</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div id="s-login" class="screen on">
+    <div class="top"><h1>Касса экспедиторов</h1><span class="pill" id="net-pill">локально</span></div>
+    <p class="muted">Водитель — своё меню. Кассир — кабинет на всех.</p>
+    <div class="card">
+      <label>Логин</label>
+      <input id="log-login" placeholder="логин" autocomplete="username"/>
+      <label>Пароль</label>
+      <input id="log-pass" type="password" placeholder="пароль" autocomplete="current-password"/>
+      <button class="pri" style="width:100%;margin-top:12px" id="log-go">Войти</button>
+      <p class="muted" style="margin-top:8px">Кассир сначала: логин <b>kassa</b>, пароль <b>0000</b>. Водителей добавляете вы, каждому свой логин и пароль.</p>
+    </div>
+  </div>
+
+  <div id="s-driver" class="screen">
+    <div class="top">
+      <div>
+        <h1 id="d-hello">Водитель</h1>
+        <p class="muted" id="d-path">календарь</p>
+      </div>
+      <div class="row" style="flex:0">
+        <button class="ghost" id="d-back" style="display:none">Назад</button>
+        <button class="ghost" id="d-out">Выйти</button>
+      </div>
+    </div>
+    <div id="d-calwrap" class="card">
+      <div class="top">
+        <h2>Мои дни</h2>
+        <div class="row" style="flex:0">
+          <button class="ghost" id="d-prev">←</button>
+          <div id="d-month" class="pill"></div>
+          <button class="ghost" id="d-next">→</button>
+        </div>
+      </div>
+      <p class="muted">На дне видно + или − по кассе. Сверху — сумма за месяц.</p>
+      <div id="d-month-sum" class="big">за месяц  0</div>
+      <div class="cal" id="d-cal"></div>
+    </div>
+    <div id="d-form" style="display:none">
+    <div class="card">
+      <label>Район, который повёз</label>
+      <input id="d-raion" placeholder="например Алатау / центр">
+      <div class="muted" style="margin-top:10px">Стоит от кассира — вы это не правите</div>
+      <div class="grid2" style="margin-top:8px">
+        <div><div class="muted">Развоз</div><div class="big num" id="d-razvoz">—</div></div>
+        <div><div class="muted">QR Kaspi</div><div class="big num" id="d-qr">—</div></div>
+      </div>
+      <p class="muted" id="d-lock" style="margin-top:8px"></p>
+    </div>
+    <div class="card yellow">
+      <h2>Ваши цифры</h2>
+      <label>Возврат</label><input id="d-ret" inputmode="numeric" placeholder="0">
+      <label>Конса — только то, что QR в Kaspi ещё открывает. Оплаченное не писать.</label>
+      <input id="d-cons" inputmode="numeric" placeholder="0">
+      <label>Терминал (вы его видите)</label><input id="d-term" inputmode="numeric" placeholder="0">
+      <div class="okbox" style="margin-top:10px">
+        <div class="muted">Должен сдать наличными</div>
+        <div class="big num" id="d-must">—</div>
+      </div>
+    </div>
+    <div class="card yellow">
+      <h2>Купюры — сколько штук</h2>
+      <div class="grid2" id="bills"></div>
+      <label>Монеты, сумма</label><input id="d-coins" inputmode="numeric" placeholder="0">
+      <div style="margin-top:8px"><span class="muted">Касса нал.</span> <span class="big num" id="d-cash">0</span></div>
+    </div>
+    <div class="card yellow">
+      <h2>Расход</h2>
+      <label>Стоянка</label><input id="d-park" inputmode="numeric" placeholder="0">
+      <label>Обед</label><input id="d-lunch" inputmode="numeric" placeholder="0">
+      <label>Заправки</label><input id="d-fuel" inputmode="numeric" placeholder="0">
+      <label>Прочее</label><input id="d-other" inputmode="numeric" placeholder="0">
+      <label>Аванс</label><input id="d-adv" inputmode="numeric" placeholder="0">
+      <div style="margin-top:8px"><span class="muted">Расход всего</span> <span class="big num" id="d-exp">0</span></div>
+    </div>
+    <div class="card" id="d-itog-box">
+      <div class="muted">Итог</div>
+      <div class="big num" id="d-itog">—</div>
+      <p id="d-itog-txt" class="muted"></p>
+      <div class="row" style="margin-top:10px">
+        <button class="ok" id="d-close">Закрыть кассу</button>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div id="s-cash" class="screen">
+    <div class="top">
+      <div><h1>Кабинет кассира</h1><p class="muted" id="c-path">водители</p></div>
+      <div class="row" style="flex:0">
+        <button class="ghost" id="c-back" style="display:none">Назад</button>
+        <button class="ghost" id="c-out">Выйти</button>
+      </div>
+    </div>
+    <div id="c-list" class="card">
+      <div class="top"><h2>Водители</h2></div>
+      <p class="muted">Нажмите имя — календарь его касс.</p>
+      <div class="drv-list" id="c-drivers"></div>
+      <h2 style="margin-top:16px">Новый водитель</h2>
+      <label>Имя как в ведомости</label>
+      <input id="u-name" placeholder="Асамбек">
+      <label>Логин</label>
+      <input id="u-login" placeholder="asambek">
+      <label>Пароль</label>
+      <input id="u-pass" placeholder="свой пароль">
+      <button class="pri" style="width:100%;margin-top:10px" id="u-add">Добавить пользователя</button>
+      <p class="muted" style="margin-top:8px">Каждому свой вход. Список через запятую больше не нужен.</p>
+    </div>
+    <div id="c-calwrap" class="card" style="display:none">
+      <div class="top">
+        <h2 id="c-cal-name">Календарь</h2>
+        <div class="row" style="flex:0">
+          <button class="ghost" id="c-prev">←</button>
+          <div id="c-month" class="pill"></div>
+          <button class="ghost" id="c-next">→</button>
+        </div>
+      </div>
+      <p class="muted">На дне + или −. Сверху сумма за месяц у этого водителя.</p>
+      <div id="c-month-sum" class="big">за месяц  0</div>
+      <div class="cal" id="c-cal"></div>
+    </div>
+    <div id="c-daywrap" class="card" style="display:none">
+      <h2 id="c-day-title">День</h2>
+      <p class="muted" id="c-day-st"></p>
+      <label>Сумма накладных (развоз со сводной)</label>
+      <input id="c-razvoz" inputmode="numeric">
+      <label>Эквайринг QR</label>
+      <input id="c-qr" inputmode="numeric">
+      <button class="pri" style="width:100%;margin-top:10px" id="c-save">Сохранить развоз и QR</button>
+      <div id="c-day-rest" style="margin-top:12px"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ok" id="c-accept">Принял деньги</button>
+        <button class="ghost" id="c-print-day">Печать бланка</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
