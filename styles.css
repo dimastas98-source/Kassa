@@ -42,6 +42,12 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
 .kbd{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .kbd button{padding:16px;font-size:18px;font-weight:700}
 .drv-list button{width:100%;text-align:left;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.board-row{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--line)}
+.board-row .nm{font-weight:700}
+@media(max-width:520px){
+  .board-row{grid-template-columns:1fr 1fr; }
+  .board-row .nm{grid-column:1/-1}
+}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .cal .dow{font-size:11px;color:var(--mute);text-align:center}
 .daycell{min-height:64px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:6px;text-align:left;font-size:12px}
