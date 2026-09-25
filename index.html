@@ -36,6 +36,7 @@
       </div>
       <div class="row" style="flex:0">
         <button class="ghost" id="d-back" style="display:none" data-i18n="back">Назад</button>
+        <button class="ghost" id="d-open-set" title="Настройки" style="width:44px;padding:10px;font-size:20px">⚙</button>
         <button class="ghost" id="d-out" data-i18n="exit">Выйти</button>
       </div>
     </div>
@@ -50,7 +51,9 @@
       </div>
       <div id="d-month-sum" class="big">за месяц  0</div>
       <div class="cal" id="d-cal"></div>
-      <h2 style="margin-top:16px" data-i18n="newPass">Сменить пароль</h2>
+    </div>
+    <div id="d-setwrap" class="card" style="display:none">
+      <h2 data-i18n="newPass">Сменить пароль</h2>
       <label data-i18n="oldPass">Старый пароль</label>
       <input id="d-oldpass" type="password">
       <label data-i18n="newPass2">Новый пароль</label>

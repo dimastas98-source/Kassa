@@ -290,12 +290,15 @@ function openDriver(){
 function showDriver(view){
   $("d-calwrap").style.display = view==="cal"?"block":"none";
   $("d-form").style.display = view==="form"?"block":"none";
+  const set = $("d-setwrap");
+  if(set) set.style.display = view==="set"?"block":"none";
   $("d-back").style.display = view==="cal"?"none":"inline-block";
-  $("d-path").textContent = view==="cal" ? t("calendar") : D.date;
+  $("d-path").textContent = view==="cal" ? t("calendar") : (view==="set" ? "настройки" : D.date);
   if(view==="cal") renderDCal();
   if(view==="form") renderDriver();
 }
 $("d-back").onclick = ()=> showDriver("cal");
+$("d-open-set").onclick = ()=> showDriver("set");
 function renderDCal(){
   const months=t("monthNames").split(",");
   $("d-month").textContent = months[D.m]+" "+D.y;
