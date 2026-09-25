@@ -18,7 +18,6 @@
       <label>Пароль</label>
       <input id="log-pass" type="password" placeholder="пароль" autocomplete="current-password"/>
       <button class="pri" style="width:100%;margin-top:12px" id="log-go">Войти</button>
-      <p class="muted" style="margin-top:8px">Кассир сначала: логин <b>kassa</b>, пароль <b>0000</b>. Водителей добавляете вы, каждому свой логин и пароль.</p>
     </div>
   </div>
 
@@ -132,16 +131,34 @@
     <div id="c-daywrap" class="card" style="display:none">
       <h2 id="c-day-title">День</h2>
       <p class="muted" id="c-day-st"></p>
+      <label>Район</label>
+      <input id="c-raion" placeholder="район">
       <label>Сумма накладных (развоз со сводной)</label>
       <input id="c-razvoz" inputmode="numeric">
       <label>Эквайринг QR</label>
       <input id="c-qr" inputmode="numeric">
-      <button class="pri" style="width:100%;margin-top:10px" id="c-save">Сохранить развоз и QR</button>
+      <label>Возврат</label>
+      <input id="c-ret" inputmode="numeric">
+      <label>Конса</label>
+      <input id="c-cons" inputmode="numeric">
+      <label>Терминал</label>
+      <input id="c-term" inputmode="numeric">
+      <h2 style="margin-top:14px">Купюры — штук</h2>
+      <div class="grid2" id="c-bills"></div>
+      <label>Монеты, сумма</label>
+      <input id="c-coins" inputmode="numeric">
+      <h2 style="margin-top:14px">Расход</h2>
+      <label>Стоянка</label><input id="c-park" inputmode="numeric">
+      <label>Обед</label><input id="c-lunch" inputmode="numeric">
+      <label>Заправки</label><input id="c-fuel" inputmode="numeric">
+      <label>Прочее</label><input id="c-other" inputmode="numeric">
+      <label>Аванс</label><input id="c-adv" inputmode="numeric">
       <div id="c-day-rest" style="margin-top:12px"></div>
       <div class="row" style="margin-top:10px">
+        <button class="pri" id="c-save">Сохранить правки</button>
         <button class="ok" id="c-accept">Принял деньги</button>
-        <button class="ghost" id="c-print-day">Печать бланка</button>
       </div>
+      <button class="ghost" style="width:100%;margin-top:8px" id="c-reopen">Открыть кассу снова</button>
     </div>
   </div>
 

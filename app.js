@@ -47,11 +47,23 @@ async function pull(){
     s.users = s.users || [];
     s.cash = s.cash || { login:"kassa", pass:"0000" };
     s.days = s.days || {};
+    const localHas = (S.users&&S.users.length) || Object.keys(S.days||{}).length;
+    const remoteEmpty = !s.users.length && !Object.keys(s.days||{}).length;
+    if(remoteEmpty && localHas){
+      save(S);
+      return false;
+    }
     S = s;
     localStorage.setItem(KEY, JSON.stringify(s));
     return true;
   }catch(e){ return false; }
 }
+const SESS = "kassa_sess";
+function setSess(obj){ localStorage.setItem(SESS, JSON.stringify(obj)); sessionStorage.setItem("role", obj.role||""); if(obj.who) sessionStorage.setItem("who", obj.who); if(obj.name) sessionStorage.setItem("name", obj.name); }
+function getSess(){
+  try{ return JSON.parse(localStorage.getItem(SESS)||"null"); }catch(e){ return null; }
+}
+function clearSess(){ localStorage.removeItem(SESS); sessionStorage.removeItem("role"); sessionStorage.removeItem("who"); sessionStorage.removeItem("name"); }
 function drivers(){ return S.users; }
 
 function dayObj(date){
@@ -117,17 +129,18 @@ $("log-go").onclick = ()=>{
   const login = $("log-login").value.trim().toLowerCase();
   const pass = $("log-pass").value;
   if(login===S.cash.login && pass===S.cash.pass){
-    sessionStorage.setItem("role","cash");
+    setSess({ role:"cash" });
     openCash(); return;
   }
   const u = S.users.find(x=>x.login===login && x.pass===pass);
   if(!u){ alert("Неверный логин или пароль"); return; }
-  sessionStorage.setItem("role","driver");
-  sessionStorage.setItem("who", u.login);
-  sessionStorage.setItem("name", u.name);
+  setSess({ role:"driver", who:u.login, name:u.name });
   openDriver();
 };
-$("d-out").onclick = $("c-out").onclick = ()=>{ sessionStorage.clear(); show("s-login"); };
+["log-login","log-pass"].forEach(id=>{
+  $(id).addEventListener("keydown", e=>{ if(e.key==="Enter") $("log-go").click(); });
+});
+$("d-out").onclick = $("c-out").onclick = ()=>{ clearSess(); show("s-login"); };
 
 /* driver */
 let D = { y:null, m:null, date:null };
@@ -345,28 +358,56 @@ $("c-prev").onclick = ()=>{ C.m--; if(C.m<0){C.m=11;C.y--;} renderCal(); };
 $("c-next").onclick = ()=>{ C.m++; if(C.m>11){C.m=0;C.y++;} renderCal(); };
 function renderDay(){
   const r = recCash();
+  if(!r.bills) r.bills = {20000:0,10000:0,5000:0,2000:0,1000:0,500:0};
   $("c-day-title").textContent = (C.display||C.who)+" · "+C.date;
-  $("c-day-st").textContent = (r.raion?("район "+r.raion+" · "):"")+statusText(r);
+  $("c-day-st").textContent = statusText(r)+(r.status==="closed"||r.status==="accepted"?" · можно править":"");
+  $("c-raion").value = r.raion||"";
   $("c-razvoz").value = r.razvoz||"";
   $("c-qr").value = r.qr||"";
+  $("c-ret").value = r.ret||"";
+  $("c-cons").value = r.cons||"";
+  $("c-term").value = r.term||"";
+  $("c-coins").value = r.coins||"";
+  $("c-park").value = r.park||"";
+  $("c-lunch").value = r.lunch||"";
+  $("c-fuel").value = r.fuel||"";
+  $("c-other").value = r.other||"";
+  $("c-adv").value = r.adv||"";
+  $("c-bills").innerHTML = BILLS.map(b=>`
+    <div>
+      <label>${fmt(b)} ₸ — штук</label>
+      <input data-cbill="${b}" inputmode="numeric" value="${r.bills[b]||""}">
+    </div>`).join("");
   $("c-day-rest").innerHTML = `
-    <p>Возврат ${fmt(r.ret)} · конса ${fmt(r.cons)} · терминал ${fmt(r.term)}</p>
-    <p><b>Должен нал. ${fmt(must(r))}</b></p>
-    <p>Купюры: ${BILLS.map(b=>fmt(b)+"×"+n(r.bills[b])).join(" · ")} · монеты ${fmt(r.coins)} = <b>${fmt(cashSum(r))}</b></p>
-    <p>Расход ${fmt(expSum(r))}</p>
+    <p>Касса нал. <b>${fmt(cashSum(r))}</b> · расход <b>${fmt(expSum(r))}</b></p>
+    <p>Должен нал. <b>${fmt(must(r))}</b></p>
     <p class="big ${itog(r)>0?"itog-minus":itog(r)<0?"itog-plus":"itog-ok"}">Итог ${fmtItog(itog(r))}</p>`;
   $("c-accept").style.display = r.status==="accepted"?"none":"inline-block";
+  $("c-reopen").style.display = (r.status==="closed"||r.status==="accepted")?"block":"none";
 }
-$("c-save").onclick = ()=>{
+function grabCashDay(){
   const r = recCash();
+  r.raion = $("c-raion").value.trim();
   r.razvoz = n($("c-razvoz").value);
   r.qr = n($("c-qr").value);
-  save(S); renderDay();
-};
-$("c-accept").onclick = ()=>{
-  recCash().status="accepted"; save(S); renderDay();
-};
-$("c-print-day").onclick = ()=> window.print();
+  r.ret = n($("c-ret").value);
+  r.cons = n($("c-cons").value);
+  r.term = n($("c-term").value);
+  r.coins = n($("c-coins").value);
+  r.park = n($("c-park").value);
+  r.lunch = n($("c-lunch").value);
+  r.fuel = n($("c-fuel").value);
+  r.other = n($("c-other").value);
+  r.adv = n($("c-adv").value);
+  if(!r.bills) r.bills = {};
+  $("c-bills").querySelectorAll("[data-cbill]").forEach(inp=>{
+    r.bills[inp.dataset.cbill] = n(inp.value);
+  });
+  return r;
+}
+$("c-save").onclick = ()=>{ grabCashDay(); save(S); renderDay(); };
+$("c-accept").onclick = ()=>{ grabCashDay(); recCash().status="accepted"; save(S); renderDay(); };
+$("c-reopen").onclick = ()=>{ grabCashDay(); recCash().status="closed"; save(S); renderDay(); };
 $("u-add").onclick = ()=>{
   const name = $("u-name").value.trim();
   const login = $("u-login").value.trim().toLowerCase();
@@ -381,7 +422,9 @@ $("u-add").onclick = ()=>{
 };
 
 function refreshView(){
-  const role = sessionStorage.getItem("role");
+  const a = document.activeElement;
+  if(a && (a.tagName==="INPUT"||a.tagName==="SELECT"||a.tagName==="TEXTAREA")) return;
+  const role = (getSess()||{}).role || sessionStorage.getItem("role");
   if(role==="driver" && $("s-driver").classList.contains("on")){
     if($("d-form").style.display!=="none") renderDriver();
     else renderDCal();
@@ -396,9 +439,16 @@ function refreshView(){
 (async ()=>{
   const pill = $("net-pill");
   if(pill) pill.textContent = ONLINE ? "сервер" : "только этот браузер";
+  const sess = getSess();
+  if(sess){
+    if(sess.role) sessionStorage.setItem("role", sess.role);
+    if(sess.who) sessionStorage.setItem("who", sess.who);
+    if(sess.name) sessionStorage.setItem("name", sess.name);
+  }
   if(ONLINE) await pull();
-  if(sessionStorage.getItem("role")==="driver") openDriver();
-  else if(sessionStorage.getItem("role")==="cash") openCash();
+  const role = (getSess()||{}).role || sessionStorage.getItem("role");
+  if(role==="driver") openDriver();
+  else if(role==="cash") openCash();
   if(ONLINE) setInterval(async ()=>{
     const ok = await pull();
     if(ok) refreshView();

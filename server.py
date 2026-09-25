@@ -8,7 +8,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(ROOT, "data.json")
+DATA = os.environ.get("DATA_FILE") or os.path.join(ROOT, "data.json")
 DEFAULT = {
     "users": [],
     "cash": {"login": "kassa", "pass": "0000"},
