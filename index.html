@@ -78,10 +78,16 @@
     <div class="card yellow">
       <h2 data-i18n="yourNums">Ваши цифры</h2>
       <label data-i18n="ret">Возврат</label>
-      <input id="d-ret" inputmode="decimal" placeholder="1500+2300">
+      <div class="row" style="align-items:center">
+        <input id="d-ret" inputmode="numeric" placeholder="0" style="flex:1">
+        <button type="button" class="ghost" id="d-ret-plus" style="flex:0;width:48px">+</button>
+      </div>
       <div class="muted" id="d-ret-sum"></div>
       <label data-i18n="cons">Консигнация</label>
-      <input id="d-cons" inputmode="decimal" placeholder="1500+2300">
+      <div class="row" style="align-items:center">
+        <input id="d-cons" inputmode="numeric" placeholder="0" style="flex:1">
+        <button type="button" class="ghost" id="d-cons-plus" style="flex:0;width:48px">+</button>
+      </div>
       <div class="muted" id="d-cons-sum"></div>
       <label data-i18n="term">KASPI PAY</label><input id="d-term" inputmode="numeric" placeholder="0">
       <div class="okbox" style="margin-top:10px">
@@ -189,9 +195,15 @@
       <label>QR</label>
       <input id="c-qr" inputmode="numeric">
       <label>Возврат</label>
-      <input id="c-ret" inputmode="decimal" placeholder="1500+2300">
+      <div class="row" style="align-items:center">
+        <input id="c-ret" inputmode="numeric" placeholder="0" style="flex:1">
+        <button type="button" class="ghost" id="c-ret-plus" style="flex:0;width:48px">+</button>
+      </div>
       <label>Консигнация</label>
-      <input id="c-cons" inputmode="decimal" placeholder="1500+2300">
+      <div class="row" style="align-items:center">
+        <input id="c-cons" inputmode="numeric" placeholder="0" style="flex:1">
+        <button type="button" class="ghost" id="c-cons-plus" style="flex:0;width:48px">+</button>
+      </div>
       <label>KASPI PAY</label>
       <input id="c-term" inputmode="numeric">
       <h2 style="margin-top:14px">Купюры — штук</h2>

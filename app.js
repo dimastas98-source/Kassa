@@ -408,6 +408,20 @@ function renderDriver(){
   el.addEventListener("input", persistDriver);
   el.addEventListener("change", persistDriver);
 });
+function addPlus(id){
+  const el = $(id);
+  if(!el) return;
+  let v = String(el.value||"").trim();
+  if(v==="0") v = "";
+  if(v && !v.endsWith("+")) v += "+";
+  el.value = v;
+  el.focus();
+  if(id==="d-ret"||id==="d-cons") persistDriver();
+}
+if($("d-ret-plus")) $("d-ret-plus").onclick = ()=> addPlus("d-ret");
+if($("d-cons-plus")) $("d-cons-plus").onclick = ()=> addPlus("d-cons");
+if($("c-ret-plus")) $("c-ret-plus").onclick = ()=> addPlus("c-ret");
+if($("c-cons-plus")) $("c-cons-plus").onclick = ()=> addPlus("c-cons");
 $("d-passgo").onclick = ()=>{
   const oldp = $("d-oldpass").value;
   const np = $("d-newpass").value;
