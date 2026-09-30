@@ -12,18 +12,19 @@
 </head>
 <body>
   <div id="s-login" class="screen on">
-    <div class="top"><h1 data-i18n="app">Касса экспедиторов</h1></div>
+    <div class="top"><h1 data-i18n="app">Касса экспедиторов</h1>
+      <div class="row" style="flex:0">
+        <button class="ghost" id="lang-ru">RU</button>
+        <button class="ghost" id="lang-kk">KZ</button>
+        <span class="pill" id="net-pill">локально</span>
+      </div>
+    </div>
     <div class="card">
       <label data-i18n="login">Логин</label>
-      <input id="login" autocomplete="username">
+      <input id="log-login" placeholder="логин" autocomplete="username"/>
       <label data-i18n="pass">Пароль</label>
-      <input id="pass" type="password" autocomplete="current-password">
-      <button class="pri" style="width:100%;margin-top:12px" id="go" data-i18n="enter">Войти</button>
-      <p class="muted" id="err" style="margin-top:8px"></p>
-      <div class="row" style="margin-top:12px">
-        <button class="ghost" id="lang-ru">Русский</button>
-        <button class="ghost" id="lang-kk">Қазақша</button>
-      </div>
+      <input id="log-pass" type="password" placeholder="пароль" autocomplete="current-password"/>
+      <button class="pri" style="width:100%;margin-top:12px" id="log-go" data-i18n="enter">Войти</button>
     </div>
   </div>
 
@@ -77,32 +78,22 @@
     <div class="card yellow">
       <h2 data-i18n="yourNums">Ваши цифры</h2>
       <label data-i18n="ret">Возврат</label>
-      <div id="d-ret-list"></div>
-      <div class="row" style="align-items:center">
-        <input id="d-ret-add" inputmode="numeric" placeholder="сумма накладной" style="flex:1">
-        <button type="button" class="ok" id="d-ret-go" style="flex:0">Добавить</button>
-      </div>
-      <div class="muted">всего <span id="d-ret-sum">0</span></div>
+      <input id="d-ret" inputmode="numeric" placeholder="0">
       <label data-i18n="cons">Консигнация</label>
-      <div id="d-cons-list"></div>
-      <div class="row" style="align-items:center">
-        <input id="d-cons-add" inputmode="numeric" placeholder="сумма накладной" style="flex:1">
-        <button type="button" class="ok" id="d-cons-go" style="flex:0">Добавить</button>
-      </div>
-      <div class="muted">всего <span id="d-cons-sum">0</span></div>
+      <input id="d-cons" inputmode="numeric" placeholder="0">
       <label data-i18n="term">KASPI PAY</label><input id="d-term" inputmode="numeric" placeholder="0">
       <div class="okbox" style="margin-top:10px">
         <div class="muted" data-i18n="mustCash">Должен сдать наличными</div>
         <div class="big num" id="d-must">—</div>
       </div>
     </div>
-    <div class="card">
-      <h2 data-i18n="bills">Купюры — штук</h2>
+    <div class="card yellow">
+      <h2 data-i18n="billsTitle">Купюры — сколько штук</h2>
       <div class="grid2" id="bills"></div>
       <label data-i18n="coins">Монеты, сумма</label><input id="d-coins" inputmode="numeric" placeholder="0">
-      <div style="margin-top:8px"><span class="muted" data-i18n="cashAll">Наличных всего</span> <span class="big num" id="d-cash">0</span></div>
+      <div style="margin-top:8px"><span class="muted" data-i18n="cashNal">Касса нал.</span> <span class="big num" id="d-cash">0</span></div>
     </div>
-    <div class="card">
+    <div class="card yellow">
       <h2 data-i18n="exp">Расход</h2>
       <label data-i18n="park">Стоянка</label><input id="d-park" inputmode="numeric" placeholder="0">
       <label data-i18n="lunch">Обед</label><input id="d-lunch" inputmode="numeric" placeholder="0">
