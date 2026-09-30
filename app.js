@@ -340,20 +340,50 @@ function renderBills(){
     inp.oninput = ()=>{ rec().bills[inp.dataset.bill]=n(inp.value); persistDriver(); };
   });
 }
-function hintSum(id, raw){
-  const el = $(id);
-  if(!el) return;
-  const s = String(raw||"");
-  el.textContent = s.includes("+") ? ("= "+fmt(sumExpr(s))) : "";
+function amtList(r, key){
+  if(Array.isArray(r[key+"List"]) && r[key+"List"].length) return r[key+"List"].map(n).filter(x=>x);
+  const raw = r[key+"Raw"];
+  if(raw && String(raw).includes("+")) return String(raw).split("+").map(n).filter(x=>x);
+  if(n(r[key])) return [n(r[key])];
+  return [];
+}
+function setAmtList(key, arr){
+  const r = rec();
+  r[key+"List"] = arr;
+  r[key] = arr.reduce((a,b)=>a+b,0);
+  r[key+"Raw"] = arr.join("+");
+  save(S);
+  renderAmtList(key);
+  paintTotals();
+}
+function renderAmtList(key){
+  const box = $("d-"+key+"-list");
+  const sumEl = $("d-"+key+"-sum");
+  if(!box) return;
+  const arr = amtList(rec(), key);
+  box.innerHTML = arr.map((x,i)=>`<div class="row" style="margin:4px 0;align-items:center">
+    <span class="num">${fmt(x)}</span>
+    <button type="button" class="ghost" data-del="${i}" style="flex:0;width:40px">×</button>
+  </div>`).join("");
+  if(sumEl) sumEl.textContent = fmt(arr.reduce((a,b)=>a+b,0));
+  box.querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = ()=>{
+      const next = amtList(rec(), key).filter((_,i)=>i!==Number(b.dataset.del));
+      setAmtList(key, next);
+    };
+  });
+}
+function addAmt(key){
+  const inp = $("d-"+key+"-add");
+  const v = n(inp && inp.value);
+  if(!v){ if(inp) inp.focus(); return; }
+  setAmtList(key, amtList(rec(), key).concat([v]));
+  if(inp){ inp.value=""; inp.focus(); }
 }
 function persistDriver(){
   const r = rec();
   r.raion=$("d-raion").value.trim();
-  r.retRaw=$("d-ret").value.trim();
-  r.consRaw=$("d-cons").value.trim();
-  r.ret=sumExpr(r.retRaw); r.cons=sumExpr(r.consRaw); r.term=n($("d-term").value);
-  hintSum("d-ret-sum", r.retRaw);
-  hintSum("d-cons-sum", r.consRaw);
+  r.term=n($("d-term").value);
   r.coins=n($("d-coins").value);
   r.park=n($("d-park").value); r.lunch=n($("d-lunch").value);
   r.fuel=n($("d-fuel").value); r.other=n($("d-other").value); r.adv=n($("d-adv").value);
@@ -386,11 +416,9 @@ function paintTotals(){
 function fillDriverFields(){
   const r = rec();
   fillRaionSelect("d-raion", r.raion||"");
-  $("d-ret").value=r.retRaw||(r.ret||"");
-  $("d-cons").value=r.consRaw||(r.cons||"");
+  renderAmtList("ret");
+  renderAmtList("cons");
   $("d-term").value=r.term||"";
-  hintSum("d-ret-sum", $("d-ret").value);
-  hintSum("d-cons-sum", $("d-cons").value);
   $("d-coins").value=r.coins||"";
   $("d-park").value=r.park||""; $("d-lunch").value=r.lunch||"";
   $("d-fuel").value=r.fuel||""; $("d-other").value=r.other||""; $("d-adv").value=r.adv||"";
@@ -403,25 +431,25 @@ function renderDriver(){
   const r = rec();
   if(r.status==="accepted") $("d-lock").textContent = t("accepted");
 }
-["d-raion","d-ret","d-cons","d-term","d-coins","d-park","d-lunch","d-fuel","d-other","d-adv"].forEach(id=>{
+["d-raion","d-term","d-coins","d-park","d-lunch","d-fuel","d-other","d-adv"].forEach(id=>{
   const el=$(id); if(!el) return;
   el.addEventListener("input", persistDriver);
   el.addEventListener("change", persistDriver);
 });
-function addPlus(id){
-  const el = $(id);
-  if(!el) return;
-  let v = String(el.value||"").trim();
-  if(v==="0") v = "";
-  if(v && !v.endsWith("+")) v += "+";
-  el.value = v;
-  el.focus();
-  if(id==="d-ret"||id==="d-cons") persistDriver();
-}
-if($("d-ret-plus")) $("d-ret-plus").onclick = ()=> addPlus("d-ret");
-if($("d-cons-plus")) $("d-cons-plus").onclick = ()=> addPlus("d-cons");
-if($("c-ret-plus")) $("c-ret-plus").onclick = ()=> addPlus("c-ret");
-if($("c-cons-plus")) $("c-cons-plus").onclick = ()=> addPlus("c-cons");
+if($("d-ret-go")) $("d-ret-go").onclick = ()=> addAmt("ret");
+if($("d-cons-go")) $("d-cons-go").onclick = ()=> addAmt("cons");
+["d-ret-add","d-cons-add"].forEach(id=>{
+  const el=$(id); if(!el) return;
+  el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addAmt(id.includes("ret")?"ret":"cons"); }});
+});
+if($("c-ret-plus")) $("c-ret-plus").onclick = ()=>{
+  const el=$("c-ret"); if(!el) return;
+  let v=String(el.value||"").trim(); if(v==="0") v=""; if(v && !v.endsWith("+")) v+="+"; el.value=v; el.focus();
+};
+if($("c-cons-plus")) $("c-cons-plus").onclick = ()=>{
+  const el=$("c-cons"); if(!el) return;
+  let v=String(el.value||"").trim(); if(v==="0") v=""; if(v && !v.endsWith("+")) v+="+"; el.value=v; el.focus();
+};
 $("d-passgo").onclick = ()=>{
   const oldp = $("d-oldpass").value;
   const np = $("d-newpass").value;
@@ -471,7 +499,7 @@ function openCash(){
   const now = new Date();
   if(C.y==null){ C.y=now.getFullYear(); C.m=now.getMonth(); }
   if(!C.date) C.date = today();
-  showCash("today");
+  showCash("month");
 }
 function shiftDate(iso, days){
   const d = new Date(iso+"T12:00:00");
@@ -480,11 +508,17 @@ function shiftDate(iso, days){
 }
 function showCash(view){
   C.view = view;
+  const tabs = $("c-tabs");
+  if(tabs) tabs.style.display = (view==="month"||view==="today"||view==="staff")?"flex":"none";
+  if($("c-monthall")) $("c-monthall").style.display = view==="month"?"block":"none";
+  if($("c-daylist")) $("c-daylist").style.display = view==="daylist"?"block":"none";
   $("c-today").style.display = view==="today"?"block":"none";
   $("c-staff").style.display = view==="staff"?"block":"none";
   $("c-calwrap").style.display = view==="cal"?"block":"none";
   $("c-daywrap").style.display = view==="day"?"block":"none";
-  $("c-back").style.display = view==="today"?"none":"inline-block";
+  $("c-back").style.display = (view==="month"||view==="today")?"none":"inline-block";
+  if(view==="month"){ $("c-path").textContent="календарь"; renderAllCal(); }
+  if(view==="daylist"){ $("c-path").textContent=C.date; renderDayList(); }
   if(view==="today"){ $("c-path").textContent=C.date; renderBoard(); }
   if(view==="staff"){ $("c-path").textContent="сотрудники"; fillPayUrl(); renderRaionAdmin(); renderDrivers(); }
   if(view==="cal"){ $("c-path").textContent=(C.display||C.who)+" · "+t("calendar"); renderCal(); }
@@ -492,17 +526,77 @@ function showCash(view){
 }
 $("c-day-prev").onclick = ()=>{ C.date = shiftDate(C.date||today(), -1); renderBoard(); $("c-path").textContent=C.date; };
 $("c-day-next").onclick = ()=>{ C.date = shiftDate(C.date||today(), 1); renderBoard(); $("c-path").textContent=C.date; };
+$("c-tab-month").onclick = ()=> showCash("month");
+$("c-tab-today").onclick = ()=> showCash("today");
 $("c-open-staff").onclick = ()=> showCash("staff");
 $("c-back").onclick = ()=>{
-  if($("c-daywrap").style.display!=="none") showCash("cal");
-  else if($("c-calwrap").style.display!=="none") showCash("today");
-  else showCash("today");
+  if($("c-daywrap").style.display!=="none") showCash("daylist");
+  else if($("c-daylist") && $("c-daylist").style.display!=="none") showCash("month");
+  else if($("c-calwrap").style.display!=="none") showCash("daylist");
+  else showCash("month");
 };
+function dayCrew(date){
+  const out=[];
+  for(const u of (S.users||[])){
+    const r = (S.days[date]&&S.days[date][u.login]) || null;
+    const work = r && (n(r.razvoz) || r.status==="closed" || r.status==="accepted");
+    if(!work){ out.push({u, r, mark:"нет", cls:"off"}); continue; }
+    if(r.status==="accepted") out.push({u, r, mark:t("paid"), cls:"done"});
+    else if(r.status==="closed") out.push({u, r, mark:t("hands"), cls:"wait"});
+    else out.push({u, r, mark:"не сдал", cls:"off"});
+  }
+  return out;
+}
+function dayAllPaid(date){
+  const rows = dayCrew(date).filter(x=>x.mark!=="нет");
+  return rows.length && rows.every(x=>x.cls==="done");
+}
+function renderAllCal(){
+  const months=t("monthNames").split(",");
+  $("c-all-month").textContent = months[C.m]+" "+C.y;
+  const first = new Date(C.y,C.m,1);
+  const start = (first.getDay()+6)%7;
+  const days = new Date(C.y,C.m+1,0).getDate();
+  const dow=t("dow").split(",").map(d=>`<div class="dow">${d}</div>`).join("");
+  let cells="";
+  for(let i=0;i<start;i++) cells+=`<div class="daycell empty"></div>`;
+  for(let d=1;d<=days;d++){
+    const date = `${C.y}-${String(C.m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const rows = dayCrew(date);
+    const work = rows.filter(x=>x.mark!=="нет");
+    const ok = work.filter(x=>x.cls==="done").length;
+    let cls="daycell";
+    if(work.length && ok===work.length) cls+=" paid";
+    else if(work.some(x=>x.cls==="wait")) cls+=" hands";
+    const extra = work.length ? `<div class="muted">${ok}/${work.length}</div>` : "";
+    cells+=`<button class="${cls}" data-adate="${date}"><div class="n">${d}</div>${extra}</button>`;
+  }
+  $("c-all-cal").innerHTML = dow+cells;
+  $("c-all-cal").querySelectorAll("[data-adate]").forEach(b=>b.onclick=()=>{ C.date=b.dataset.adate; showCash("daylist"); });
+}
+function renderDayList(){
+  $("c-daylist-title").textContent = C.date;
+  const rows = dayCrew(C.date);
+  if(!S.users.length){
+    $("c-daylist-box").innerHTML = `<p class="muted">Нет водителей</p>`;
+    return;
+  }
+  $("c-daylist-box").innerHTML = rows.map(x=>`<button data-who="${x.u.login}" style="width:100%;margin:6px 0;display:flex;justify-content:space-between">
+    <span>${x.u.name}</span><span class="pill ${x.cls}">${x.mark}</span>
+  </button>`).join("");
+  $("c-daylist-box").querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{
+    C.who=b.dataset.who;
+    C.display=S.users.find(u=>u.login===C.who)?.name||C.who;
+    showCash("day");
+  });
+}
+if($("c-all-prev")) $("c-all-prev").onclick = ()=>{ C.m--; if(C.m<0){C.m=11;C.y--;} renderAllCal(); };
+if($("c-all-next")) $("c-all-next").onclick = ()=>{ C.m++; if(C.m>11){C.m=0;C.y++;} renderAllCal(); };
 function renderBoard(){
   const date = C.date || today();
   C.date = date;
   const el = $("c-today-date");
-  if(el) el.textContent = date===today() ? ("сегодня · "+date) : date;
+  if(el) el.textContent = date;
   dayObj(date);
   if(!S.users.length){
     $("c-board").innerHTML = `<p class="muted">Сначала добавьте сотрудника в настройках.</p>`;
@@ -694,6 +788,62 @@ document.addEventListener("input", e=>{
 $("c-save").onclick = ()=>{ grabCashDay(); save(S); renderDay(); };
 $("c-accept").onclick = ()=>{ grabCashDay(); recCash().status="accepted"; save(S); renderDay(); };
 $("c-reopen").onclick = ()=>{ grabCashDay(); recCash().status="closed"; save(S); renderDay(); };
+function fmtDateRu(iso){
+  const p = String(iso||"").split("-");
+  if(p.length!==3) return iso||"";
+  return p[2]+"."+p[1]+"."+p[0];
+}
+function printOpis(){
+  grabCashDay();
+  const r = recCash();
+  const name = C.display || C.who || "";
+  const row = (k,v)=>`<tr><td>${k}</td><td class="n">${v}</td></tr>`;
+  const billRows = BILLS.map(b=>{
+    const k = n(r.bills && r.bills[b]);
+    return row(fmt(b)+" × "+k, fmt(k*b));
+  }).join("");
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Опись ${name}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:16px;color:#111;max-width:420px;margin:0 auto}
+    h1{font-size:20px;margin:0 0 12px;text-align:center}
+    table{width:100%;border-collapse:collapse;margin:8px 0 14px}
+    td{border-bottom:1px solid #ccc;padding:6px 0;font-size:14px}
+    td.n{text-align:right;font-variant-numeric:tabular-nums}
+    .meta{margin:0 0 4px;font-size:15px}
+    .sum td{font-weight:700;border-bottom:2px solid #111}
+    @media print{button{display:none} body{padding:0}}
+  </style></head><body>
+  <h1>Опись кассы</h1>
+  <p class="meta">Дата развоза: <b>${fmtDateRu(C.date)}</b></p>
+  <p class="meta">Водитель: <b>${name}</b></p>
+  <p class="meta">Район: <b>${r.raion||"—"}</b></p>
+  <table>
+    <tr><td colspan="2"><b>Наличные</b></td></tr>
+    ${billRows}
+    ${row("Монеты", fmt(r.coins))}
+    <tr class="sum">${row("Нал всего", fmt(cashSum(r)))}</tr>
+    ${row("KASPI PAY", fmt(r.term))}
+    <tr><td colspan="2"><b>Расходы</b></td></tr>
+    ${row("Стоянка", fmt(r.park))}
+    ${row("Обед", fmt(r.lunch))}
+    ${row("Заправки", fmt(r.fuel))}
+    ${row("Прочее", fmt(r.other))}
+    ${row("Аванс", fmt(r.adv))}
+    <tr class="sum">${row("Расход всего", fmt(expSum(r)))}</tr>
+    <tr class="sum">${row("Сумма сдачи", fmt(cashSum(r)))}</tr>
+    <tr class="sum">${row("Итог по кассе", fmtItog(itog(r)))}</tr>
+  </table>
+  <p>Кассир ____________ &nbsp;&nbsp; Водитель ____________</p>
+  <button onclick="window.print()">Печать</button>
+  </body></html>`;
+  const w = window.open("", "_blank");
+  if(!w){ alert("Разрешите всплывающие окна для печати"); return; }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 300);
+}
+if($("c-print")) $("c-print").onclick = printOpis;
 $("c-raion-add").onclick = ()=>{
   const name = ($("c-raion-new").value||"").trim();
   if(!name) return;
@@ -734,9 +884,11 @@ function refreshView(){
     else renderDCal();
   }
   if(role==="cash" && $("s-cash").classList.contains("on")){
-    if($("c-daywrap").style.display!=="none") renderDay();
-    else if($("c-calwrap").style.display!=="none") renderCal();
-    else if($("c-staff") && $("c-staff").style.display!=="none") renderDrivers();
+    if(C.view==="day") renderDay();
+    else if(C.view==="cal") renderCal();
+    else if(C.view==="staff") renderDrivers();
+    else if(C.view==="daylist") renderDayList();
+    else if(C.view==="month") renderAllCal();
     else renderBoard();
   }
 }

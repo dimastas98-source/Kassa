@@ -78,17 +78,19 @@
     <div class="card yellow">
       <h2 data-i18n="yourNums">Ваши цифры</h2>
       <label data-i18n="ret">Возврат</label>
+      <div id="d-ret-list"></div>
       <div class="row" style="align-items:center">
-        <input id="d-ret" inputmode="numeric" placeholder="0" style="flex:1">
-        <button type="button" class="ghost" id="d-ret-plus" style="flex:0;width:48px">+</button>
+        <input id="d-ret-add" inputmode="numeric" placeholder="сумма накладной" style="flex:1">
+        <button type="button" class="ok" id="d-ret-go" style="flex:0">Добавить</button>
       </div>
-      <div class="muted" id="d-ret-sum"></div>
+      <div class="muted">всего <span id="d-ret-sum">0</span></div>
       <label data-i18n="cons">Консигнация</label>
+      <div id="d-cons-list"></div>
       <div class="row" style="align-items:center">
-        <input id="d-cons" inputmode="numeric" placeholder="0" style="flex:1">
-        <button type="button" class="ghost" id="d-cons-plus" style="flex:0;width:48px">+</button>
+        <input id="d-cons-add" inputmode="numeric" placeholder="сумма накладной" style="flex:1">
+        <button type="button" class="ok" id="d-cons-go" style="flex:0">Добавить</button>
       </div>
-      <div class="muted" id="d-cons-sum"></div>
+      <div class="muted">всего <span id="d-cons-sum">0</span></div>
       <label data-i18n="term">KASPI PAY</label><input id="d-term" inputmode="numeric" placeholder="0">
       <div class="okbox" style="margin-top:10px">
         <div class="muted" data-i18n="mustCash">Должен сдать наличными</div>
@@ -132,6 +134,27 @@
         <button class="ghost" id="c-out" data-i18n="exit">Выйти</button>
       </div>
     </div>
+    <div class="row" id="c-tabs" style="margin-bottom:8px">
+      <button class="ghost" id="c-tab-month">Календарь</button>
+      <button class="ghost" id="c-tab-today">Развоз и QR</button>
+      <button class="ghost" id="c-open-staff">Сотрудники</button>
+    </div>
+    <div id="c-monthall" class="card" style="display:none">
+      <div class="top">
+        <h2>Месяц</h2>
+        <div class="row" style="flex:0">
+          <button class="ghost" id="c-all-prev">←</button>
+          <div id="c-all-month" class="pill"></div>
+          <button class="ghost" id="c-all-next">→</button>
+        </div>
+      </div>
+      <p class="muted">Зелёный — все сдали. День откроет список.</p>
+      <div class="cal" id="c-all-cal"></div>
+    </div>
+    <div id="c-daylist" class="card" style="display:none">
+      <h2 id="c-daylist-title">День</h2>
+      <div id="c-daylist-box"></div>
+    </div>
     <div id="c-today" class="card">
       <div class="top">
         <button class="ghost" id="c-day-prev">←</button>
@@ -140,7 +163,6 @@
       </div>
       <p class="muted">Развоз и QR на дату. Имя — календарь водителя.</p>
       <div id="c-board"></div>
-      <button class="ghost" style="width:100%;margin-top:12px" id="c-open-staff">Сотрудники и настройки</button>
     </div>
     <div id="c-staff" class="card" style="display:none">
       <div class="top"><h2>Сотрудники</h2></div>
@@ -221,6 +243,7 @@
         <button class="pri" id="c-save">Сохранить правки</button>
         <button class="ok" id="c-accept">Принял деньги</button>
       </div>
+      <button class="ghost" style="width:100%;margin-top:8px" id="c-print">Печать описи</button>
       <button class="ghost" style="width:100%;margin-top:8px" id="c-reopen">Открыть кассу снова</button>
     </div>
   </div>
