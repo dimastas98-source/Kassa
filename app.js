@@ -788,62 +788,6 @@ document.addEventListener("input", e=>{
 $("c-save").onclick = ()=>{ grabCashDay(); save(S); renderDay(); };
 $("c-accept").onclick = ()=>{ grabCashDay(); recCash().status="accepted"; save(S); renderDay(); };
 $("c-reopen").onclick = ()=>{ grabCashDay(); recCash().status="closed"; save(S); renderDay(); };
-function fmtDateRu(iso){
-  const p = String(iso||"").split("-");
-  if(p.length!==3) return iso||"";
-  return p[2]+"."+p[1]+"."+p[0];
-}
-function printOpis(){
-  grabCashDay();
-  const r = recCash();
-  const name = C.display || C.who || "";
-  const row = (k,v)=>`<tr><td>${k}</td><td class="n">${v}</td></tr>`;
-  const billRows = BILLS.map(b=>{
-    const k = n(r.bills && r.bills[b]);
-    return row(fmt(b)+" × "+k, fmt(k*b));
-  }).join("");
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Опись ${name}</title>
-  <style>
-    body{font-family:Arial,sans-serif;padding:16px;color:#111;max-width:420px;margin:0 auto}
-    h1{font-size:20px;margin:0 0 12px;text-align:center}
-    table{width:100%;border-collapse:collapse;margin:8px 0 14px}
-    td{border-bottom:1px solid #ccc;padding:6px 0;font-size:14px}
-    td.n{text-align:right;font-variant-numeric:tabular-nums}
-    .meta{margin:0 0 4px;font-size:15px}
-    .sum td{font-weight:700;border-bottom:2px solid #111}
-    @media print{button{display:none} body{padding:0}}
-  </style></head><body>
-  <h1>Опись кассы</h1>
-  <p class="meta">Дата развоза: <b>${fmtDateRu(C.date)}</b></p>
-  <p class="meta">Водитель: <b>${name}</b></p>
-  <p class="meta">Район: <b>${r.raion||"—"}</b></p>
-  <table>
-    <tr><td colspan="2"><b>Наличные</b></td></tr>
-    ${billRows}
-    ${row("Монеты", fmt(r.coins))}
-    <tr class="sum">${row("Нал всего", fmt(cashSum(r)))}</tr>
-    ${row("KASPI PAY", fmt(r.term))}
-    <tr><td colspan="2"><b>Расходы</b></td></tr>
-    ${row("Стоянка", fmt(r.park))}
-    ${row("Обед", fmt(r.lunch))}
-    ${row("Заправки", fmt(r.fuel))}
-    ${row("Прочее", fmt(r.other))}
-    ${row("Аванс", fmt(r.adv))}
-    <tr class="sum">${row("Расход всего", fmt(expSum(r)))}</tr>
-    <tr class="sum">${row("Сумма сдачи", fmt(cashSum(r)))}</tr>
-    <tr class="sum">${row("Итог по кассе", fmtItog(itog(r)))}</tr>
-  </table>
-  <p>Кассир ____________ &nbsp;&nbsp; Водитель ____________</p>
-  <button onclick="window.print()">Печать</button>
-  </body></html>`;
-  const w = window.open("", "_blank");
-  if(!w){ alert("Разрешите всплывающие окна для печати"); return; }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 300);
-}
-if($("c-print")) $("c-print").onclick = printOpis;
 $("c-raion-add").onclick = ()=>{
   const name = ($("c-raion-new").value||"").trim();
   if(!name) return;
