@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Общая касса. Запуск: python3 server.py
 Открыть: http://127.0.0.1:8080
+
+Хранение:
+- если задан MONGO_URI — MongoDB (данные не слетают после деплоя)
+- иначе — файл data.json (на Render стирается при редеплое)
 """
 import json
 import os
@@ -9,25 +13,87 @@ from urllib.parse import urlparse
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("DATA_FILE") or os.path.join(ROOT, "data.json")
+MONGO_URI = (os.environ.get("MONGO_URI") or "").strip()
+MONGO_DB = os.environ.get("MONGO_DB") or "kassa"
+MONGO_COL = os.environ.get("MONGO_COL") or "state"
+DOC_ID = "main"
+
 DEFAULT = {
     "users": [],
     "cash": {"login": "kassa", "pass": "0000"},
     "days": {},
 }
 
+_mongo = None
 
-def read_state():
-    if not os.path.exists(DATA):
-        return DEFAULT.copy()
-    with open(DATA, "r", encoding="utf-8") as f:
-        s = json.load(f)
+
+def _normalize(s):
+    if not isinstance(s, dict):
+        s = {}
     s.setdefault("users", [])
     s.setdefault("cash", {"login": "kassa", "pass": "0000"})
     s.setdefault("days", {})
     return s
 
 
+def _mongo_col():
+    global _mongo
+    if not MONGO_URI:
+        return None
+    if _mongo is None:
+        from pymongo import MongoClient
+
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=8000)
+        client.admin.command("ping")
+        _mongo = client[MONGO_DB][MONGO_COL]
+        print("MongoDB: ok, db=%s col=%s" % (MONGO_DB, MONGO_COL))
+    return _mongo
+
+
+def read_state():
+    col = None
+    try:
+        col = _mongo_col()
+    except Exception as e:
+        print("MongoDB read error:", e)
+        col = None
+
+    if col is not None:
+        try:
+            doc = col.find_one({"_id": DOC_ID})
+            if not doc:
+                return _normalize(DEFAULT.copy())
+            doc = dict(doc)
+            doc.pop("_id", None)
+            return _normalize(doc)
+        except Exception as e:
+            print("MongoDB find error:", e)
+            return _normalize(DEFAULT.copy())
+
+    if not os.path.exists(DATA):
+        return _normalize(DEFAULT.copy())
+    with open(DATA, "r", encoding="utf-8") as f:
+        return _normalize(json.load(f))
+
+
 def write_state(s):
+    s = _normalize(s)
+    col = None
+    try:
+        col = _mongo_col()
+    except Exception as e:
+        print("MongoDB write connect error:", e)
+        col = None
+
+    if col is not None:
+        try:
+            payload = dict(s)
+            payload["_id"] = DOC_ID
+            col.replace_one({"_id": DOC_ID}, payload, upsert=True)
+            return
+        except Exception as e:
+            print("MongoDB write error:", e)
+
     tmp = DATA + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(s, f, ensure_ascii=False)
@@ -54,6 +120,17 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/state":
             return self._json(200, read_state())
+        if path == "/api/health":
+            mode = "mongo" if MONGO_URI else "file"
+            ok = True
+            err = ""
+            if MONGO_URI:
+                try:
+                    _mongo_col()
+                except Exception as e:
+                    ok = False
+                    err = str(e)
+            return self._json(200 if ok else 503, {"ok": ok, "storage": mode, "error": err})
         if path == "/":
             self.path = "/index.html"
         return super().do_GET()
@@ -69,15 +146,20 @@ class Handler(SimpleHTTPRequestHandler):
             s = json.loads(body)
         except json.JSONDecodeError:
             return self._json(400, {"error": "bad json"})
-        s.setdefault("users", [])
-        s.setdefault("cash", {"login": "kassa", "pass": "0000"})
-        s.setdefault("days", {})
         write_state(s)
         return self._json(200, {"ok": True})
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8080"))
+    if MONGO_URI:
+        print("Storage: MongoDB")
+        try:
+            _mongo_col()
+        except Exception as e:
+            print("MongoDB warning at start:", e)
+    else:
+        print("Storage: file", DATA)
     httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     print("Касса: http://127.0.0.1:%s" % port)
     httpd.serve_forever()
