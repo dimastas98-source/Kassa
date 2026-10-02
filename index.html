@@ -143,6 +143,7 @@
     </div>
     <div id="c-daylist" class="card" style="display:none">
       <h2 id="c-daylist-title">День</h2>
+      <div id="c-daylist-filt"></div>
       <div id="c-daylist-box"></div>
       <button class="ghost" style="width:100%;margin-top:12px" id="c-print-day">Печать итога за день</button>
     </div>
@@ -153,6 +154,7 @@
         <button class="ghost" id="c-day-next">→</button>
       </div>
       <p class="muted">Развоз и QR на дату. Имя — календарь водителя.</p>
+      <div id="c-board-filt"></div>
       <div id="c-board"></div>
     </div>
     <div id="c-staff" class="card" style="display:none">
@@ -162,6 +164,7 @@
         <button class="ghost" id="lang-ru3">Русский</button>
         <button class="ghost" id="lang-kk3">Қазақша</button>
       </div>
+      <div id="c-staff-filt"></div>
       <div class="drv-list" id="c-drivers"></div>
       <h2 style="margin-top:16px">Бэкап базы</h2>
       <p class="muted">Скачайте перед обновлением сайта. Если кассы слетят — загрузите файл обратно.</p>
@@ -244,7 +247,19 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <div id="toast" class="toast"></div>
+  <div id="ask-modal">
+    <div class="box">
+      <h3 id="ask-title">Ввод</h3>
+      <input id="ask-input" autocomplete="off">
+      <div class="row" style="margin-top:12px">
+        <button class="ghost" id="ask-cancel">Отмена</button>
+        <button class="pri" id="ask-ok">OK</button>
+      </div>
+    </div>
+  </div>
+  <iframe id="print-frame" title="print"></iframe>
+  <script src="app.js?v=5"></script>
   <script>
     if("serviceWorker" in navigator){
       navigator.serviceWorker.register("/sw.js").catch(function(){});

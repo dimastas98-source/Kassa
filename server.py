@@ -44,6 +44,7 @@ def _mongo_col():
         from pymongo import MongoClient
 
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=8000)
+        # проверка связи при первом обращении
         client.admin.command("ping")
         _mongo = client[MONGO_DB][MONGO_COL]
         print("MongoDB: ok, db=%s col=%s" % (MONGO_DB, MONGO_COL))
@@ -93,6 +94,7 @@ def write_state(s):
             return
         except Exception as e:
             print("MongoDB write error:", e)
+            # падаем в файл как запасной вариант
 
     tmp = DATA + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

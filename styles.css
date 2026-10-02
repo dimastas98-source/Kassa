@@ -42,8 +42,13 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
 .kbd{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .kbd button{padding:16px;font-size:18px;font-weight:700}
 .drv-list button{width:100%;text-align:left;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-.board-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line)}
-.board-row .nm{grid-column:1/-1;font-weight:700;text-align:left}
+.board-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;padding:8px 0;border-bottom:1px solid var(--line)}
+.board-row .nm{grid-column:1/-1;font-weight:700;text-align:left;padding:6px 8px}
+.filt{margin:8px 0}
+.filt input{margin-bottom:6px}
+.filt .row{gap:6px}
+.filt .row button{flex:1;min-width:0;padding:8px 6px;font-size:12px}
+.filt .row button.on{background:var(--yellow);color:#1a1400;font-weight:700;border-color:transparent}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .cal .dow{font-size:11px;color:var(--mute);text-align:center}
 .daycell{min-height:64px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:6px;text-align:left;font-size:12px}
@@ -56,8 +61,23 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
   body{padding:24px}
   .desk{display:grid;grid-template-columns:280px 1fr;gap:16px}
 }
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120%);
+  background:#1e2b3c;border:1px solid var(--line);color:var(--text);
+  padding:12px 18px;border-radius:12px;z-index:9999;max-width:90%;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);transition:transform .2s ease;font-size:14px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:#6b2a2a;background:#3a1515}
+.toast.ok{border-color:#1fa971;background:#14301f}
+#ask-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;
+  align-items:center;justify-content:center;padding:16px}
+#ask-modal.on{display:flex}
+#ask-modal .box{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:16px;width:100%;max-width:360px}
+#ask-modal .box h3{margin:0 0 10px;font-size:16px}
+#print-frame{position:fixed;right:0;bottom:0;width:0;height:0;border:0}
 @media print{
   body{background:#fff;color:#000;max-width:none}
   .no-print{display:none!important}
   .card{border:1px solid #000;background:#fff}
+  .toast,#ask-modal{display:none!important}
 }

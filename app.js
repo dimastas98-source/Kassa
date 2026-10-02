@@ -252,6 +252,73 @@ function show(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
   $(id).classList.add("on");
 }
+function toast(msg, kind){
+  const el = $("toast");
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.remove("err","ok","show");
+  if(kind==="err") el.classList.add("err");
+  if(kind==="ok") el.classList.add("ok");
+  requestAnimationFrame(()=> el.classList.add("show"));
+  clearTimeout(el._t);
+  el._t = setTimeout(()=> el.classList.remove("show"), 2200);
+}
+function askText(title, def){
+  return new Promise(resolve=>{
+    const modal = $("ask-modal");
+    const inp = $("ask-input");
+    const tit = $("ask-title");
+    if(!modal || !inp){ resolve(null); return; }
+    tit.textContent = title || "Ввод";
+    inp.value = def==null ? "" : String(def);
+    modal.classList.add("on");
+    setTimeout(()=>{ inp.focus(); inp.select && inp.select(); }, 50);
+    const done = (v)=>{
+      modal.classList.remove("on");
+      $("ask-ok").onclick = null;
+      $("ask-cancel").onclick = null;
+      resolve(v);
+    };
+    $("ask-ok").onclick = ()=> done(inp.value);
+    $("ask-cancel").onclick = ()=> done(null);
+    inp.onkeydown = e=>{
+      if(e.key==="Enter"){ e.preventDefault(); done(inp.value); }
+      if(e.key==="Escape"){ e.preventDefault(); done(null); }
+    };
+  });
+}
+function askYes(msg){
+  return new Promise(resolve=>{
+    const modal = $("ask-modal");
+    const inp = $("ask-input");
+    const tit = $("ask-title");
+    if(!modal){ resolve(false); return; }
+    tit.textContent = msg || "Подтвердите";
+    if(inp){ inp.style.display = "none"; inp.value = ""; }
+    modal.classList.add("on");
+    const done = (v)=>{
+      modal.classList.remove("on");
+      if(inp) inp.style.display = "";
+      $("ask-ok").onclick = null;
+      $("ask-cancel").onclick = null;
+      resolve(v);
+    };
+    $("ask-ok").onclick = ()=> done(true);
+    $("ask-cancel").onclick = ()=> done(false);
+  });
+}
+function printHtml(html){
+  const iframe = $("print-frame");
+  if(!iframe){ toast("Нет рамки печати", "err"); return; }
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  setTimeout(()=>{
+    try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }
+    catch(e){ toast("Не удалось открыть печать", "err"); }
+  }, 250);
+}
 
 /* login */
 $("log-go").onclick = ()=>{
@@ -262,7 +329,7 @@ $("log-go").onclick = ()=>{
     openCash(); return;
   }
   const u = S.users.find(x=>x.login===login && x.pass===pass);
-  if(!u){ alert(t("badLogin")); return; }
+  if(!u){ toast(t("badLogin"), "err"); return; }
   setSess({ role:"driver", who:u.login, name:u.name });
   openDriver();
 };
@@ -410,46 +477,46 @@ if($("c-cons-plus")) $("c-cons-plus").onclick = ()=>{
 $("d-passgo").onclick = ()=>{
   const oldp = $("d-oldpass").value;
   const np = $("d-newpass").value;
-  if(!np){ alert(t("passEmpty")); return; }
+  if(!np){ toast(t("passEmpty"), "err"); return; }
   const login = who();
   const u = S.users.find(x=>x.login===login);
-  if(!u || u.pass!==oldp){ alert(t("passBad")); return; }
+  if(!u || u.pass!==oldp){ toast(t("passBad"), "err"); return; }
   u.pass = np; save(S);
   $("d-oldpass").value=$("d-newpass").value="";
-  alert(t("passOk"));
+  toast(t("passOk"), "ok");
 };
 $("c-passgo").onclick = ()=>{
   const oldp = $("c-oldpass").value;
   const np = $("c-newpass").value;
-  if(!np){ alert(t("passEmpty")); return; }
-  if(!S.cash || S.cash.pass!==oldp){ alert(t("passBad")); return; }
+  if(!np){ toast(t("passEmpty"), "err"); return; }
+  if(!S.cash || S.cash.pass!==oldp){ toast(t("passBad"), "err"); return; }
   S.cash.pass = np; save(S);
   $("c-oldpass").value=$("c-newpass").value="";
-  alert(t("passOk"));
+  toast(t("passOk"), "ok");
 };
 $("d-close").onclick = ()=>{
   persistDriver();
   const r = rec();
-  if(!r.razvoz){ alert(t("noRazvoz")); return; }
+  if(!r.razvoz){ toast(t("noRazvoz"), "err"); return; }
   r.status = "closed";
   save(S);
   paintTotals();
-  alert(t("closed"));
+  toast(t("closed"), "ok");
 };
 $("d-pay").onclick = ()=>{
   const r = rec();
   const i = itog(r);
-  if(i<=0){ alert(t("noMinus")); return; }
+  if(i<=0){ toast(t("noMinus"), "err"); return; }
   const url = (S.cash && S.cash.payUrl) || PAY_DEFAULT;
   const sum = fmt(i);
-  try{ navigator.clipboard.writeText(String(Math.round(i))); }catch(e){}
-  alert(t("payAlert").replace("{s}", sum));
-  window.location.href = url;
+  try{ navigator.clipboard.writeText(String(Math.round(Math.abs(i)))); }catch(e){}
+  toast(t("payAlert").replace("{s}", sum), "ok");
+  setTimeout(()=>{ window.location.href = url; }, 400);
 };
 /* водитель бланк не печатает */
 
 /* cashier */
-let C = { who:null, y:null, m:null, date:null };
+let C = { who:null, y:null, m:null, date:null, q:"", st:"all" };
 
 function openCash(){
   show("s-cash");
@@ -492,20 +559,23 @@ $("c-back").onclick = ()=>{
   else if($("c-calwrap").style.display!=="none") showCash("daylist");
   else showCash("month");
 };
+function cashMark(r){
+  if(r && r.status==="accepted") return { text:"сдал", cls:"done" };
+  if(r && r.status==="closed") return { text:"посчитана", cls:"wait" };
+  return { text:"не посчитана", cls:"off" };
+}
 function dayCrew(date){
   const out=[];
   for(const u of (S.users||[])){
     const r = (S.days[date]&&S.days[date][u.login]) || null;
+    const m = cashMark(r);
     const work = r && (n(r.razvoz) || r.status==="closed" || r.status==="accepted");
-    if(!work){ out.push({u, r, mark:"нет", cls:"off"}); continue; }
-    if(r.status==="accepted") out.push({u, r, mark:t("paid"), cls:"done"});
-    else if(r.status==="closed") out.push({u, r, mark:t("hands"), cls:"wait"});
-    else out.push({u, r, mark:"не сдал", cls:"off"});
+    out.push({u, r, mark: work ? m.text : (m.cls==="off" ? "не посчитана" : m.text), cls:m.cls, work:!!work});
   }
   return out;
 }
 function dayAllPaid(date){
-  const rows = dayCrew(date).filter(x=>x.mark!=="нет");
+  const rows = dayCrew(date).filter(x=>x.work);
   return rows.length && rows.every(x=>x.cls==="done");
 }
 function renderAllCal(){
@@ -520,25 +590,77 @@ function renderAllCal(){
   for(let d=1;d<=days;d++){
     const date = `${C.y}-${String(C.m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
     const rows = dayCrew(date);
-    const work = rows.filter(x=>x.mark!=="нет");
+    const work = rows.filter(x=>x.work);
     const ok = work.filter(x=>x.cls==="done").length;
+    const counted = work.filter(x=>x.cls==="wait" || x.cls==="done").length;
     let cls="daycell";
     if(work.length && ok===work.length) cls+=" paid";
     else if(work.some(x=>x.cls==="wait")) cls+=" hands";
-    const extra = work.length ? `<div class="muted">${ok}/${work.length}</div>` : "";
+    const extra = work.length ? `<div class="muted">${counted} счит. · ${ok} сдал</div>` : "";
     cells+=`<button class="${cls}" data-adate="${date}"><div class="n">${d}</div>${extra}</button>`;
   }
   $("c-all-cal").innerHTML = dow+cells;
   $("c-all-cal").querySelectorAll("[data-adate]").forEach(b=>b.onclick=()=>{ C.date=b.dataset.adate; showCash("daylist"); });
 }
+function dayStatusKey(r){
+  if(!r) return "off";
+  if(r.status==="accepted") return "done";
+  if(r.status==="closed") return "wait";
+  return "off";
+}
+function statusRank(k){ return k==="off"?0:k==="wait"?1:2; }
+function matchQuery(name, login, q){
+  if(!q) return true;
+  const s = (name+" "+login).toLowerCase();
+  return s.includes(q.toLowerCase());
+}
+function ensureFiltBar(boxId, onChange){
+  const box = $(boxId);
+  if(!box) return;
+  if(!box.dataset.ready){
+    box.dataset.ready = "1";
+    box.innerHTML = `<input id="${boxId}-q" placeholder="Поиск по имени…" value="">
+      <div class="row">
+        <button type="button" data-st="all" class="on">Все</button>
+        <button type="button" data-st="off">Не посчитана</button>
+        <button type="button" data-st="wait">Посчитана</button>
+        <button type="button" data-st="done">Сдал</button>
+      </div>`;
+    const qel = $(boxId+"-q");
+    if(qel) qel.oninput = ()=>{ C.q = qel.value.trim(); onChange(); };
+    box.querySelectorAll("[data-st]").forEach(b=>{
+      b.onclick = ()=>{ C.st = b.dataset.st; ensureFiltBar(boxId, onChange); onChange(); };
+    });
+  }
+  const st = C.st||"all";
+  box.querySelectorAll("[data-st]").forEach(b=>{
+    b.classList.toggle("on", b.dataset.st===st);
+  });
+  const qel = $(boxId+"-q");
+  if(qel && qel.value !== (C.q||"") && document.activeElement!==qel) qel.value = C.q||"";
+}
 function renderDayList(){
   $("c-daylist-title").textContent = C.date;
-  const rows = dayCrew(C.date);
+  ensureFiltBar("c-daylist-filt", renderDayList);
+  let rows = dayCrew(C.date);
+  rows = rows.filter(x=>{
+    if(!matchQuery(x.u.name, x.u.login, C.q)) return false;
+    if(C.st && C.st!=="all" && x.cls!==C.st) return false;
+    return true;
+  });
+  rows.sort((a,b)=> statusRank(a.cls)-statusRank(b.cls) || (a.u.name||"").localeCompare(b.u.name||"","ru"));
   if(!S.users.length){
     $("c-daylist-box").innerHTML = `<p class="muted">Нет водителей</p>`;
     return;
   }
-  $("c-daylist-box").innerHTML = rows.map(x=>`<button data-who="${x.u.login}" style="width:100%;margin:6px 0;display:flex;justify-content:space-between">
+  if(!rows.length){
+    $("c-daylist-box").innerHTML = `<p class="muted">Никого не найдено</p>`;
+    return;
+  }
+  const counted = rows.filter(x=>x.cls==="wait").length;
+  const paid = rows.filter(x=>x.cls==="done").length;
+  const none = rows.filter(x=>x.cls==="off").length;
+  $("c-daylist-box").innerHTML = `<p class="muted">посчитана ${counted} · сдал ${paid} · не посчитана ${none}</p>`+rows.map(x=>`<button data-who="${x.u.login}" style="width:100%;margin:4px 0;display:flex;justify-content:space-between;padding:10px">
     <span>${x.u.name}</span><span class="pill ${x.cls}">${x.mark}</span>
   </button>`).join("");
   $("c-daylist-box").querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{
@@ -555,19 +677,35 @@ function renderBoard(){
   const el = $("c-today-date");
   if(el) el.textContent = date;
   dayObj(date);
+  ensureFiltBar("c-board-filt", renderBoard);
   if(!S.users.length){
     $("c-board").innerHTML = `<p class="muted">Сначала добавьте сотрудника в настройках.</p>`;
     return;
   }
-  $("c-board").innerHTML = S.users.map(u=>{
+  let list = S.users.map(u=>{
     const r = (S.days[date]&&S.days[date][u.login]) || blank();
-    const st = r.status==="accepted"?t("paid"): r.status==="closed"?t("hands"): (r.raion||"");
+    return { u, r, sk: dayStatusKey(r) };
+  });
+  list = list.filter(x=>{
+    if(!matchQuery(x.u.name, x.u.login, C.q)) return false;
+    if(C.st && C.st!=="all" && x.sk!==C.st) return false;
+    return true;
+  });
+  list.sort((a,b)=> statusRank(a.sk)-statusRank(b.sk) || (a.u.name||"").localeCompare(b.u.name||"","ru"));
+  if(!list.length){
+    $("c-board").innerHTML = `<p class="muted">Никого не найдено</p>`;
+    return;
+  }
+  const sum = {off:0, wait:0, done:0};
+  list.forEach(x=> sum[x.sk] = (sum[x.sk]||0)+1);
+  $("c-board").innerHTML = `<p class="muted">посчитана ${sum.wait||0} · сдал ${sum.done||0} · не посчитана ${sum.off||0}</p>`+list.map(x=>{
+    const m = cashMark(x.r);
     return `<div class="board-row">
-      <button class="ghost nm" data-open="${u.login}" style="text-align:left;padding:8px">
-        ${u.name}<br><span class="muted">${st||u.login}</span>
+      <button class="ghost nm" data-open="${x.u.login}" style="text-align:left;padding:6px 8px">
+        ${x.u.name} <span class="pill ${m.cls}">${m.text}</span>
       </button>
-      <div><label>Развоз</label><input inputmode="numeric" data-br="${u.login}" value="${r.razvoz||""}"></div>
-      <div><label>QR</label><input inputmode="numeric" data-bq="${u.login}" value="${r.qr||""}"></div>
+      <div><label>Развоз</label><input inputmode="numeric" data-br="${x.u.login}" value="${x.r.razvoz||""}"></div>
+      <div><label>QR</label><input inputmode="numeric" data-bq="${x.u.login}" value="${x.r.qr||""}"></div>
     </div>`;
   }).join("");
   $("c-board").querySelectorAll("[data-open]").forEach(b=>{
@@ -607,53 +745,74 @@ function fillPayUrl(){
   if(el) el.value = (S.cash && S.cash.payUrl) || PAY_DEFAULT;
 }
 function renderDrivers(){
+  ensureFiltBar("c-staff-filt", renderDrivers);
   if(!S.users.length){
     $("c-drivers").innerHTML = `<p class="muted">Пока никого нет. Добавьте первого ниже.</p>`;
     return;
   }
-  $("c-drivers").innerHTML = S.users.map(u=>{
+  let list = S.users.map(u=>{
     const s = driverStats(u.login);
-    return `<div class="card" style="padding:10px;margin:0 0 8px">
-      <button data-name="${u.login}" style="margin:0">
-        <span>${u.name}<br><span class="muted">${u.login}</span></span>
-        <span class="pill ${s.hands?"wait":s.paid?"done":""}">
+    let sk = "off";
+    if(s.hands) sk = "wait";
+    else if(s.paid) sk = "done";
+    return { u, s, sk };
+  });
+  list = list.filter(x=>{
+    if(!matchQuery(x.u.name, x.u.login, C.q)) return false;
+    if(C.st && C.st!=="all" && x.sk!==C.st) return false;
+    return true;
+  });
+  list.sort((a,b)=> statusRank(a.sk)-statusRank(b.sk) || (a.u.name||"").localeCompare(b.u.name||"","ru"));
+  if(!list.length){
+    $("c-drivers").innerHTML = `<p class="muted">Никого не найдено</p>`;
+    return;
+  }
+  $("c-drivers").innerHTML = list.map(x=>{
+    const s = x.s;
+    return `<div class="card" style="padding:8px;margin:0 0 6px">
+      <button data-name="${x.u.login}" style="margin:0;padding:8px">
+        <span>${x.u.name}<br><span class="muted">${x.u.login}</span></span>
+        <span class="pill ${x.sk}">
           ${s.hands?("на руках "+s.hands):""}${s.hands&&s.paid?" · ":""}${s.paid?("сдал "+s.paid): (!s.hands&&!s.paid?"пусто":"")}
         </span>
       </button>
-      <div class="row" style="margin-top:6px">
-        <button class="ghost" data-rename="${u.login}">имя</button>
-        <button class="ghost" data-pass="${u.login}">пароль</button>
-        <button class="ghost" data-del="${u.login}">удалить</button>
+      <div class="row" style="margin-top:4px">
+        <button class="ghost" data-rename="${x.u.login}">имя</button>
+        <button class="ghost" data-pass="${x.u.login}">пароль</button>
+        <button class="ghost" data-del="${x.u.login}">удалить</button>
       </div>
     </div>`;
   }).join("");
   $("c-drivers").querySelectorAll("[data-name]").forEach(b=>b.onclick=()=>{
     C.who=b.dataset.name; C.display=S.users.find(x=>x.login===C.who)?.name||C.who; showCash("cal");
   });
-  $("c-drivers").querySelectorAll("[data-rename]").forEach(b=>b.onclick=e=>{
+  $("c-drivers").querySelectorAll("[data-rename]").forEach(b=>b.onclick=async e=>{
     e.stopPropagation();
     const u = S.users.find(x=>x.login===b.dataset.rename);
     if(!u) return;
-    const nm = prompt("Новое имя", u.name||"");
+    const nm = await askText("Новое имя", u.name||"");
     if(nm==null) return;
-    const t = String(nm).trim();
-    if(!t){ alert("Имя пустое"); return; }
-    u.name = t;
+    const tt = String(nm).trim();
+    if(!tt){ toast("Имя пустое", "err"); return; }
+    u.name = tt;
     save(S);
     renderDrivers();
+    toast("Имя сохранено", "ok");
   });
-  $("c-drivers").querySelectorAll("[data-pass]").forEach(b=>b.onclick=e=>{
+  $("c-drivers").querySelectorAll("[data-pass]").forEach(b=>b.onclick=async e=>{
     e.stopPropagation();
-    const p = prompt("Новый пароль для "+b.dataset.pass);
-    if(!p) return;
+    const p = await askText("Новый пароль для "+b.dataset.pass, "");
+    if(p==null || !String(p).trim()) return;
     const u = S.users.find(x=>x.login===b.dataset.pass);
-    u.pass = p; save(S); alert("Пароль обновлён");
+    if(!u) return;
+    u.pass = String(p).trim(); save(S); toast("Пароль обновлён", "ok");
   });
-  $("c-drivers").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{
+  $("c-drivers").querySelectorAll("[data-del]").forEach(b=>b.onclick=async e=>{
     e.stopPropagation();
-    if(!confirm("Удалить "+b.dataset.del+"?")) return;
+    if(!(await askYes("Удалить "+b.dataset.del+"?"))) return;
     S.users = S.users.filter(x=>x.login!==b.dataset.del);
     save(S); renderDrivers();
+    toast("Удалено", "ok");
   });
 }
 function recCash(){ return dayObj(C.date)[C.who]; }
@@ -761,55 +920,84 @@ $("c-reopen").onclick = ()=>{ grabCashDay(); recCash().status="closed"; save(S);
 function fmtDateRu(iso){
   const p = String(iso||"").split("-");
   if(p.length!==3) return iso||"";
-  return p[2]+"."+p[1]+"."+p[0];
+  const mon = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  return p[2]+"."+ (mon[Number(p[1])-1] || p[1]);
+}
+function opisCardHtml(r, name, date){
+  const expRows = [
+    ["Стоянка", r.park],
+    ["Обед", r.lunch],
+    ["Заправки", r.fuel],
+    ["Прочее", r.other],
+    ["Аванс", r.adv]
+  ];
+  const billRows = BILLS.map(b=>{
+    const cnt = n(r.bills && r.bills[b]);
+    return `<tr><td class="nal">${fmt(b)} × ${cnt} = ${fmt(cnt*b)}</td></tr>`;
+  }).join("");
+  const expCells = expRows.map((x,i)=>`<tr><td>${x[0]}</td><td class="nalcell">${i===0?billRows?"":"":""}</td></tr>`).join("");
+  const left = expRows.map(x=>`<tr><td>${x[0]}</td><td class="n">${fmt(x[1])}</td></tr>`).join("");
+  const right = BILLS.map(b=>{
+    const cnt = n(r.bills && r.bills[b]);
+    return `<tr><td class="n">${fmt(b)} × ${cnt} = ${fmt(cnt*b)}</td></tr>`;
+  }).join("");
+  const kassa = cashSum(r) + n(r.coins);
+  return `<div class="slip">
+    <table class="g">
+      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${r.raion||"—"}</td></tr>
+      <tr><td colspan="2" class="name">${name||"—"}</td></tr>
+    </table>
+    <table class="g mid">
+      <tr><th>Расход</th><th>Нал</th></tr>
+      ${expRows.map((x,i)=>{
+        const b = BILLS[i];
+        const cnt = b!=null ? n(r.bills && r.bills[b]) : 0;
+        const nal = b!=null ? `${fmt(b)} × ${cnt} = ${fmt(cnt*b)}` : (BILLS[5]&&i===5?"":"");
+        return `<tr><td>${x[0]}</td><td class="n">${b!=null?fmt(b)+" × "+cnt+" = "+fmt(cnt*b):""}</td></tr>`;
+      }).join("")}
+      <tr><td></td><td class="n">${BILLS[5]!=null?fmt(BILLS[5])+" × "+n(r.bills&&r.bills[BILLS[5]])+" = "+fmt(n(r.bills&&r.bills[BILLS[5]])*BILLS[5]):""}</td></tr>
+      <tr><td>Нал итог</td><td class="n">${fmt(cashSum(r))}</td></tr>
+      <tr><td>Монеты</td><td class="n">${fmt(r.coins)}</td></tr>
+    </table>
+    <table class="g bot">
+      <tr><td colspan="2"><b>Развоз:</b></td></tr>
+      <tr><td>Развоз</td><td class="n">${fmt(r.razvoz)}</td></tr>
+      <tr><td>Расход</td><td class="n">${fmt(expSum(r))}</td></tr>
+      <tr><td>Касса</td><td class="n">${fmt(kassa)}</td></tr>
+      <tr><td>Каспи</td><td class="n">${fmt(r.term)}</td></tr>
+      <tr class="tot"><td>Итог</td><td class="n">${fmtItog(itog(r))}</td></tr>
+    </table>
+  </div>`;
 }
 function printOpis(){
   grabCashDay();
   const r = recCash();
   const name = C.display || C.who || "";
-  const row = (k,v)=>`<tr><td>${k}</td><td class="n">${v}</td></tr>`;
-  const billRows = BILLS.map(b=>{
-    const k = n(r.bills && r.bills[b]);
-    return row(fmt(b)+" × "+k, fmt(k*b));
-  }).join("");
+  const card = opisCardHtml(r, name, C.date);
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Опись ${name}</title>
   <style>
-    body{font-family:Arial,sans-serif;padding:16px;color:#111;max-width:420px;margin:0 auto}
-    h1{font-size:20px;margin:0 0 12px;text-align:center}
-    table{width:100%;border-collapse:collapse;margin:8px 0 14px}
-    td{border-bottom:1px solid #ccc;padding:6px 0;font-size:14px}
-    td.n{text-align:right;font-variant-numeric:tabular-nums}
-    .meta{margin:0 0 4px;font-size:15px}
-    .sum td{font-weight:700;border-bottom:2px solid #111}
-    @media print{button{display:none} body{padding:0}}
+    @page{size:A4 landscape;margin:8mm}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;color:#000;margin:0}
+    .sheet{width:277mm;height:190mm}
+    .slip{width:88mm;border:1px solid #000;padding:0;font-size:11px}
+    table.g{width:100%;border-collapse:collapse}
+    table.g td, table.g th{border:1px solid #000;padding:2px 4px}
+    table.g .name{font-size:18px;font-weight:700;padding:4px}
+    table.g th{text-align:left;font-weight:700}
+    table.g td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    table.g td.r{text-align:right}
+    table.mid{margin-top:-1px}
+    table.bot{margin-top:8px}
+    tr.tot td{font-weight:700}
+    .no-print{margin:8px}
+    @media print{.no-print{display:none}}
   </style></head><body>
-  <h1>Опись кассы</h1>
-  <p class="meta">Дата: <b>${fmtDateRu(C.date)}</b></p>
-  <p class="meta">Водитель: <b>${name}</b></p>
-  <p class="meta">Район: <b>${r.raion||"—"}</b></p>
-  <table>
-    <tr class="sum">${row("К сдаче (нал)", fmt(cashSum(r)))}</tr>
-    <tr><td colspan="2"><b>По номиналу</b></td></tr>
-    ${billRows}
-    ${row("Мелочь", fmt(r.coins))}
-    <tr><td colspan="2"><b>Расходы</b></td></tr>
-    ${row("Стоянка", fmt(r.park))}
-    ${row("Обед", fmt(r.lunch))}
-    ${row("Заправки", fmt(r.fuel))}
-    ${row("Прочее", fmt(r.other))}
-    ${row("Аванс", fmt(r.adv))}
-    <tr class="sum">${row("Расход всего", fmt(expSum(r)))}</tr>
-    <tr class="sum">${row("KASPI PAY", fmt(r.term))}</tr>
-  </table>
-  <p>Кассир ____________ &nbsp;&nbsp; Водитель ____________</p>
-  <button onclick="window.print()">Печать</button>
+  <div class="sheet">${card}</div>
+  <div class="no-print"><button onclick="window.print()">Печать</button>
+  <span style="margin-left:8px;color:#555">A4 альбомная · одна опись слева</span></div>
   </body></html>`;
-  const w = window.open("", "_blank");
-  if(!w){ alert("Разрешите всплывающие окна для печати"); return; }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 300);
+  printHtml(html);
 }
 if($("c-print")) $("c-print").onclick = printOpis;
 function printDayTotal(){
@@ -846,12 +1034,7 @@ function printDayTotal(){
   <p style="margin-top:16px">Кассир ____________</p>
   <button onclick="window.print()">Печать</button>
   </body></html>`;
-  const w = window.open("", "_blank");
-  if(!w){ alert("Разрешите всплывающие окна"); return; }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 300);
+  printHtml(html);
 }
 if($("c-print-day")) $("c-print-day").onclick = printDayTotal;
 function exportBackup(){
@@ -873,12 +1056,14 @@ function importBackup(file){
       s.cash = s.cash || { login:"kassa", pass:"0000" };
       s.days = s.days || {};
       ensureRaions(s);
-      if(!confirm("Заменить текущую базу файлом бэкапа? Водителей: "+s.users.length)) return;
-      S = s;
-      save(S);
-      alert("База восстановлена");
-      showCash("staff");
-    }catch(e){ alert("Файл не подходит"); }
+      askYes("Заменить базу? Водителей: "+s.users.length).then(ok=>{
+        if(!ok) return;
+        S = s;
+        save(S);
+        toast("База восстановлена", "ok");
+        showCash("staff");
+      });
+    }catch(e){ toast("Файл не подходит", "err"); }
   };
   reader.readAsText(file);
 }
@@ -901,19 +1086,20 @@ $("c-paysave").onclick = ()=>{
   S.cash = S.cash || { login:"kassa", pass:"0000" };
   S.cash.payUrl = url;
   save(S);
-  alert("Ссылка Kaspi сохранена");
+  toast("Ссылка Kaspi сохранена", "ok");
 };
 $("u-add").onclick = ()=>{
   const name = $("u-name").value.trim();
   const login = $("u-login").value.trim().toLowerCase();
   const pass = $("u-pass").value;
-  if(!name || !login || !pass){ alert("Имя, логин и пароль обязательны"); return; }
-  if(login==="kassa"){ alert("Логин kassa занят кассиром"); return; }
-  if(S.users.some(x=>x.login===login)){ alert("Такой логин уже есть"); return; }
+  if(!name || !login || !pass){ toast("Имя, логин и пароль обязательны", "err"); return; }
+  if(login==="kassa"){ toast("Логин kassa занят кассиром", "err"); return; }
+  if(S.users.some(x=>x.login===login)){ toast("Такой логин уже есть", "err"); return; }
   S.users.push({ name, login, pass });
   save(S);
   $("u-name").value=$("u-login").value=$("u-pass").value="";
   renderDrivers();
+  toast("Водитель добавлен", "ok");
 };
 
 function isTyping(){
