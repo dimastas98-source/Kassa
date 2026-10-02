@@ -948,16 +948,16 @@ function opisCardHtml(r, name, date){
       <tr><td colspan="2" class="name">${name||"—"}</td></tr>
     </table>
     <table class="g mid">
-      <tr><th>Расход</th><th>Нал</th></tr>
+      <tr><th>Расход</th><th class="n">сумма</th><th>Нал</th></tr>
       ${expRows.map((x,i)=>{
         const b = BILLS[i];
         const cnt = b!=null ? n(r.bills && r.bills[b]) : 0;
-        const nal = b!=null ? `${fmt(b)} × ${cnt} = ${fmt(cnt*b)}` : (BILLS[5]&&i===5?"":"");
-        return `<tr><td>${x[0]}</td><td class="n">${b!=null?fmt(b)+" × "+cnt+" = "+fmt(cnt*b):""}</td></tr>`;
+        const nal = b!=null ? `${fmt(b)} × ${cnt} = ${fmt(cnt*b)}` : "";
+        return `<tr><td>${x[0]}</td><td class="n">${fmt(x[1])}</td><td class="n">${nal}</td></tr>`;
       }).join("")}
-      <tr><td></td><td class="n">${BILLS[5]!=null?fmt(BILLS[5])+" × "+n(r.bills&&r.bills[BILLS[5]])+" = "+fmt(n(r.bills&&r.bills[BILLS[5]])*BILLS[5]):""}</td></tr>
-      <tr><td>Нал итог</td><td class="n">${fmt(cashSum(r))}</td></tr>
-      <tr><td>Монеты</td><td class="n">${fmt(r.coins)}</td></tr>
+      <tr><td></td><td></td><td class="n">${fmt(BILLS[5])} × ${n(r.bills&&r.bills[BILLS[5]])} = ${fmt(n(r.bills&&r.bills[BILLS[5]])*BILLS[5])}</td></tr>
+      <tr><td>Нал итог</td><td></td><td class="n">${fmt(cashSum(r))}</td></tr>
+      <tr><td>Монеты</td><td class="n">${fmt(r.coins)}</td><td></td></tr>
     </table>
     <table class="g bot">
       <tr><td colspan="2"><b>Развоз:</b></td></tr>
@@ -979,8 +979,8 @@ function printOpis(){
     @page{size:A4 landscape;margin:8mm}
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;color:#000;margin:0}
-    .sheet{width:277mm;height:190mm}
-    .slip{width:88mm;border:1px solid #000;padding:0;font-size:11px}
+    .sheet{width:277mm;height:190mm;display:flex;justify-content:flex-end}
+    .slip{width:149mm;border:1px solid #000;padding:0;font-size:12px}
     table.g{width:100%;border-collapse:collapse}
     table.g td, table.g th{border:1px solid #000;padding:2px 4px}
     table.g .name{font-size:18px;font-weight:700;padding:4px}
