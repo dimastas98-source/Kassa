@@ -924,50 +924,32 @@ function fmtDateRu(iso){
   return p[2]+"."+ (mon[Number(p[1])-1] || p[1]);
 }
 function opisCardHtml(r, name, date){
-  const expRows = [
-    ["Стоянка", r.park],
-    ["Обед", r.lunch],
-    ["Заправки", r.fuel],
-    ["Прочее", r.other],
-    ["Аванс", r.adv]
-  ];
-  const billRows = BILLS.map(b=>{
-    const cnt = n(r.bills && r.bills[b]);
-    return `<tr><td class="nal">${fmt(b)} × ${cnt} = ${fmt(cnt*b)}</td></tr>`;
-  }).join("");
-  const expCells = expRows.map((x,i)=>`<tr><td>${x[0]}</td><td class="nalcell">${i===0?billRows?"":"":""}</td></tr>`).join("");
-  const left = expRows.map(x=>`<tr><td>${x[0]}</td><td class="n">${fmt(x[1])}</td></tr>`).join("");
-  const right = BILLS.map(b=>{
-    const cnt = n(r.bills && r.bills[b]);
-    return `<tr><td class="n">${fmt(b)} × ${cnt} = ${fmt(cnt*b)}</td></tr>`;
-  }).join("");
   const billsOnly = BILLS.reduce((a,b)=>a+n(r.bills&&r.bills[b])*b,0);
   const kassa = billsOnly + n(r.coins);
+  const qty = b => n(r.bills && r.bills[b]);
+  const line = (b) => `${b} * ${qty(b)} = ${fmt(qty(b)*b)}`;
   return `<div class="slip">
-    <table class="g">
-      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${r.raion||"—"}</td></tr>
-      <tr><td colspan="2" class="name">${name||"—"}</td></tr>
-    </table>
-    <table class="g mid">
-      <tr><th>Расход</th><th class="n">сумма</th><th>Нал</th></tr>
-      ${expRows.map((x,i)=>{
-        const b = BILLS[i];
-        const cnt = b!=null ? n(r.bills && r.bills[b]) : 0;
-        const nal = b!=null ? `${fmt(b)} × ${cnt} = ${fmt(cnt*b)}` : "";
-        return `<tr><td>${x[0]}</td><td class="n">${fmt(x[1])}</td><td class="n">${nal}</td></tr>`;
-      }).join("")}
-      <tr><td></td><td></td><td class="n">${fmt(BILLS[5])} × ${n(r.bills&&r.bills[BILLS[5]])} = ${fmt(n(r.bills&&r.bills[BILLS[5]])*BILLS[5])}</td></tr>
-      <tr><td>Нал итог</td><td></td><td class="n">${fmt(billsOnly)}</td></tr>
-      <tr><td>Монеты</td><td class="n">${fmt(r.coins)}</td><td></td></tr>
-    </table>
-    <table class="g bot">
-      <tr><td colspan="2"><b>Развоз:</b></td></tr>
-      <tr><td>Развоз</td><td class="n">${fmt(r.razvoz)}</td></tr>
-      <tr><td>Расход</td><td class="n">${fmt(expSum(r))}</td></tr>
-      <tr><td>Касса</td><td class="n">${fmt(kassa)}</td></tr>
-      <tr><td>Каспи</td><td class="n">${fmt(r.term)}</td></tr>
-      <tr class="tot"><td>Итог</td><td class="n">${fmtItog(itog(r))}</td></tr>
-    </table>
+    <div class="r2"><span>Дата: ${fmtDateRu(date)}</span><span>Район: ${r.raion||"—"}</span></div>
+    <div class="r3"><span>Имя: ${name||"—"}</span><span>№</span></div>
+    <div class="r4">Наличка</div>
+    <div class="line"><span>Расход:</span><span></span><b>${line(20000)}</b></div>
+    <div class="line"><span>Стоянка: ${fmt(r.park)}</span><span></span><b>${line(10000)}</b></div>
+    <div class="line"><span>Обед: ${fmt(r.lunch)}</span><span></span><b>${line(5000)}</b></div>
+    <div class="line"><span>Заправки: ${fmt(r.fuel)}</span><span></span><b>${line(2000)}</b></div>
+    <div class="line"><span>Прочее: ${fmt(r.other)}</span><span></span><b>${line(1000)}</b></div>
+    <div class="line"><span>Аванс: ${fmt(r.adv)}</span><span></span><b>${line(500)}</b></div>
+    <div class="gap"></div>
+    <div class="line"><span>Итог:</span><b>${fmt(billsOnly)}</b></div>
+    <div class="line"><span>Монеты:</span><b>${fmt(r.coins)}</b></div>
+    <div class="gap"></div>
+    <div class="line"><span>Каспи ${fmt(r.term)}</span></div>
+    <div class="gap big"></div>
+    <div class="sec">Развоз:</div>
+    <div class="line"><span>Развоз:</span><b>${fmt(r.razvoz)}</b></div>
+    <div class="line"><span>Расход:</span><b>${fmt(expSum(r))}</b></div>
+    <div class="line"><span>Касса:</span><b>${fmt(kassa)}</b></div>
+    <div class="line"><span>Каспи:</span><b>${fmt(r.term)}</b></div>
+    <div class="line tot"><span>Итог:</span><b>${fmtItog(itog(r))}</b></div>
   </div>`;
 }
 function printOpis(){
@@ -981,16 +963,14 @@ function printOpis(){
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;color:#000;margin:0}
     .sheet{width:277mm;height:190mm;display:flex;justify-content:flex-end}
-    .slip{width:120mm;border:1px solid #000;padding:0;font-size:9px}
-    table.g{width:100%;border-collapse:collapse}
-    table.g td, table.g th{border:1px solid #000;padding:1px 3px}
-    table.g .name{font-size:13px;font-weight:700;padding:2px}
-    table.g th{text-align:left;font-weight:700}
-    table.g td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-    table.g td.r{text-align:right}
-    table.mid{margin-top:-1px}
-    table.bot{margin-top:8px}
-    tr.tot td{font-weight:700}
+    .slip{width:92mm;font-size:11px;font-family:Arial,sans-serif;color:#000}
+    .slip .r2,.slip .r3,.slip .line{display:flex;justify-content:space-between;gap:8px}
+    .slip .r4{text-align:right;font-weight:700;margin-top:6px}
+    .slip .line{min-height:18px}
+    .slip .gap{height:10px}
+    .slip .gap.big{height:28px}
+    .slip .sec{font-weight:700;margin-top:4px}
+    .slip .tot{font-weight:700}
     .no-print{margin:8px}
     @media print{.no-print{display:none}}
   </style></head><body>
