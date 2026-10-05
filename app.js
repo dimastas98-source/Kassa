@@ -941,11 +941,12 @@ function opisCardHtml(r, name, date){
     const cnt = n(r.bills && r.bills[b]);
     return `<tr><td class="n">${fmt(b)} × ${cnt} = ${fmt(cnt*b)}</td></tr>`;
   }).join("");
-  const kassa = cashSum(r) + n(r.coins);
+  const billsOnly = BILLS.reduce((a,b)=>a+n(r.bills&&r.bills[b])*b,0);
+  const kassa = billsOnly + n(r.coins);
   return `<div class="slip">
     <table class="g">
-      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${r.raion||"—"}</td></tr>
-      <tr><td colspan="2" class="name">${name||"—"}</td></tr>
+      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${esc(r.raion)||"—"}</td></tr>
+      <tr><td colspan="2" class="name">${esc(name)||"—"}</td></tr>
     </table>
     <table class="g mid">
       <tr><th>Расход</th><th class="n">сумма</th><th>Нал</th></tr>
@@ -956,7 +957,7 @@ function opisCardHtml(r, name, date){
         return `<tr><td>${x[0]}</td><td class="n">${fmt(x[1])}</td><td class="n">${nal}</td></tr>`;
       }).join("")}
       <tr><td></td><td></td><td class="n">${fmt(BILLS[5])} × ${n(r.bills&&r.bills[BILLS[5]])} = ${fmt(n(r.bills&&r.bills[BILLS[5]])*BILLS[5])}</td></tr>
-      <tr><td>Нал итог</td><td></td><td class="n">${fmt(cashSum(r))}</td></tr>
+      <tr><td>Нал итог</td><td></td><td class="n">${fmt(billsOnly)}</td></tr>
       <tr><td>Монеты</td><td class="n">${fmt(r.coins)}</td><td></td></tr>
     </table>
     <table class="g bot">
@@ -980,10 +981,10 @@ function printOpis(){
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;color:#000;margin:0}
     .sheet{width:277mm;height:190mm;display:flex;justify-content:flex-end}
-    .slip{width:149mm;border:1px solid #000;padding:0;font-size:12px}
+    .slip{width:120mm;border:1px solid #000;padding:0;font-size:9px}
     table.g{width:100%;border-collapse:collapse}
-    table.g td, table.g th{border:1px solid #000;padding:2px 4px}
-    table.g .name{font-size:18px;font-weight:700;padding:4px}
+    table.g td, table.g th{border:1px solid #000;padding:1px 3px}
+    table.g .name{font-size:13px;font-weight:700;padding:2px}
     table.g th{text-align:left;font-weight:700}
     table.g td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     table.g td.r{text-align:right}
@@ -995,7 +996,7 @@ function printOpis(){
   </style></head><body>
   <div class="sheet">${card}</div>
   <div class="no-print"><button onclick="window.print()">Печать</button>
-  <span style="margin-left:8px;color:#555">A4 альбомная · одна опись слева</span></div>
+  <span style="margin-left:8px;color:#555">A4 альбомная, масштаб 100%. Одна опись справа</span></div>
   </body></html>`;
   printHtml(html);
 }
