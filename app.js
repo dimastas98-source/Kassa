@@ -945,8 +945,8 @@ function opisCardHtml(r, name, date){
   const kassa = billsOnly + n(r.coins);
   return `<div class="slip">
     <table class="g">
-      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${esc(r.raion)||"—"}</td></tr>
-      <tr><td colspan="2" class="name">${esc(name)||"—"}</td></tr>
+      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${r.raion||"—"}</td></tr>
+      <tr><td colspan="2" class="name">${name||"—"}</td></tr>
     </table>
     <table class="g mid">
       <tr><th>Расход</th><th class="n">сумма</th><th>Нал</th></tr>
