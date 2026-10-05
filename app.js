@@ -927,29 +927,40 @@ function opisCardHtml(r, name, date){
   const billsOnly = BILLS.reduce((a,b)=>a+n(r.bills&&r.bills[b])*b,0);
   const kassa = billsOnly + n(r.coins);
   const qty = b => n(r.bills && r.bills[b]);
-  const line = (b) => `${b} * ${qty(b)} = ${fmt(qty(b)*b)}`;
+  const bill = (nom, label, sum) => `<tr>
+    <td class="lab">${label}</td>
+    <td class="n">${fmt(sum)}</td>
+    <td class="n nom">${fmt(nom)}</td>
+    <td class="star">*</td>
+    <td class="n qty">${qty(nom)}</td>
+    <td class="n sum">${fmt(qty(nom)*nom)}</td>
+  </tr>`;
   return `<div class="slip">
-    <div class="r2"><span>Дата: ${fmtDateRu(date)}</span><span>Район: ${r.raion||"—"}</span></div>
-    <div class="r3"><span>Имя: ${name||"—"}</span><span>№</span></div>
-    <div class="r4">Наличка</div>
-    <div class="line"><span>Расход:</span><span></span><b>${line(20000)}</b></div>
-    <div class="line"><span>Стоянка: ${fmt(r.park)}</span><span></span><b>${line(10000)}</b></div>
-    <div class="line"><span>Обед: ${fmt(r.lunch)}</span><span></span><b>${line(5000)}</b></div>
-    <div class="line"><span>Заправки: ${fmt(r.fuel)}</span><span></span><b>${line(2000)}</b></div>
-    <div class="line"><span>Прочее: ${fmt(r.other)}</span><span></span><b>${line(1000)}</b></div>
-    <div class="line"><span>Аванс: ${fmt(r.adv)}</span><span></span><b>${line(500)}</b></div>
-    <div class="gap"></div>
-    <div class="line"><span>Итог:</span><b>${fmt(billsOnly)}</b></div>
-    <div class="line"><span>Монеты:</span><b>${fmt(r.coins)}</b></div>
-    <div class="gap"></div>
-    <div class="line"><span>Каспи ${fmt(r.term)}</span></div>
-    <div class="gap big"></div>
-    <div class="sec">Развоз:</div>
-    <div class="line"><span>Развоз:</span><b>${fmt(r.razvoz)}</b></div>
-    <div class="line"><span>Расход:</span><b>${fmt(expSum(r))}</b></div>
-    <div class="line"><span>Касса:</span><b>${fmt(kassa)}</b></div>
-    <div class="line"><span>Каспи:</span><b>${fmt(r.term)}</b></div>
-    <div class="line tot"><span>Итог:</span><b>${fmtItog(itog(r))}</b></div>
+    <table class="g head">
+      <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${r.raion||"—"}</td></tr>
+      <tr><td colspan="2">Имя: ${name||"—"}</td></tr>
+    </table>
+    <table class="g">
+      <tr><td colspan="2"></td><td colspan="4" class="r title">Наличка</td></tr>
+      ${bill(20000, "Расход:", "")}
+      ${bill(10000, "Стоянка:", r.park)}
+      ${bill(5000, "Обед:", r.lunch)}
+      ${bill(2000, "Заправки:", r.fuel)}
+      ${bill(1000, "Прочее:", r.other)}
+      ${bill(500, "Аванс:", r.adv)}
+      <tr><td class="lab">Итог:</td><td></td><td colspan="4" class="n sum">${fmt(billsOnly)}</td></tr>
+      <tr><td class="lab">Монеты:</td><td class="n">${fmt(r.coins)}</td><td colspan="4"></td></tr>
+      <tr><td class="lab">Каспи</td><td class="n">${fmt(r.term)}</td><td colspan="4"></td></tr>
+    </table>
+    <table class="g bot">
+      <tr><td colspan="2" class="title">Развоз:</td></tr>
+      <tr><td>Развоз:</td><td class="n">${fmt(r.razvoz)}</td></tr>
+      <tr><td>Расход:</td><td class="n">${fmt(expSum(r))}</td></tr>
+      <tr><td>Касса:</td><td class="n">${fmt(kassa)}</td></tr>
+      <tr><td>Каспи:</td><td class="n">${fmt(r.term)}</td></tr>
+      <tr class="tot"><td>Итог:</td><td class="n">${fmtItog(itog(r))}</td></tr>
+    </table>
+    <div class="stamp">М.П.</div>
   </div>`;
 }
 function printOpis(){
@@ -963,20 +974,27 @@ function printOpis(){
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;color:#000;margin:0}
     .sheet{width:277mm;height:190mm;display:flex;justify-content:flex-end}
-    .slip{width:92mm;font-size:11px;font-family:Arial,sans-serif;color:#000}
-    .slip .r2,.slip .r3,.slip .line{display:flex;justify-content:space-between;gap:8px}
-    .slip .r4{text-align:right;font-weight:700;margin-top:6px}
-    .slip .line{min-height:18px}
-    .slip .gap{height:10px}
-    .slip .gap.big{height:28px}
-    .slip .sec{font-weight:700;margin-top:4px}
-    .slip .tot{font-weight:700}
+    .slip{width:76mm;font-size:10px;font-family:Arial,sans-serif;color:#000;border:1.5px solid #000;padding:2mm}
+    table.g{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:1.5mm}
+    table.g td{padding:1px 3px;vertical-align:middle;border:1px solid #000;height:5.2mm}
+    table.head td{height:5.6mm}
+    td.lab{width:22mm}
+    td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:"Courier New",monospace}
+    td.nom{width:14mm}
+    td.star{width:4mm;text-align:center}
+    td.qty{width:8mm}
+    td.sum{width:16mm}
+    td.r{text-align:right}
+    td.title{font-weight:700}
+    table.bot{margin-top:2mm;width:100%}
+    tr.tot td{font-weight:700}
+    .stamp{margin:3mm auto 1mm;width:24mm;height:22mm;border:1.5px solid #000;text-align:center;line-height:22mm;font-size:10px}
     .no-print{margin:8px}
     @media print{.no-print{display:none}}
   </style></head><body>
   <div class="sheet">${card}</div>
   <div class="no-print"><button onclick="window.print()">Печать</button>
-  <span style="margin-left:8px;color:#555">A4 альбомная, масштаб 100%. Одна опись справа</span></div>
+  <span style="margin-left:8px;color:#555">A4 альбомная, масштаб 100%. Опись справа, уже и с рамкой</span></div>
   </body></html>`;
   printHtml(html);
 }
