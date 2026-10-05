@@ -929,7 +929,7 @@ function opisCardHtml(r, name, date){
   const qty = b => n(r.bills && r.bills[b]);
   const bill = (nom, label, sum) => `<tr>
     <td class="lab">${label}</td>
-    <td class="n">${fmt(sum)}</td>
+    <td class="n amt">${sum===""?"":fmt(sum)}</td>
     <td class="n nom">${fmt(nom)}</td>
     <td class="star">*</td>
     <td class="n qty">${qty(nom)}</td>
@@ -941,16 +941,16 @@ function opisCardHtml(r, name, date){
       <tr><td colspan="2">Имя: ${name||"—"}</td></tr>
     </table>
     <table class="g">
-      <tr><td colspan="2"></td><td colspan="4" class="r title">Наличка</td></tr>
-      ${bill(20000, "Расход:", "")}
-      ${bill(10000, "Стоянка:", r.park)}
-      ${bill(5000, "Обед:", r.lunch)}
-      ${bill(2000, "Заправки:", r.fuel)}
-      ${bill(1000, "Прочее:", r.other)}
-      ${bill(500, "Аванс:", r.adv)}
-      <tr><td class="lab">Итог:</td><td></td><td colspan="4" class="n sum">${fmt(billsOnly)}</td></tr>
-      <tr><td class="lab">Монеты:</td><td class="n">${fmt(r.coins)}</td><td colspan="4"></td></tr>
-      <tr><td class="lab">Каспи</td><td class="n">${fmt(r.term)}</td><td colspan="4"></td></tr>
+      <tr><td colspan="2" class="title c">Расход</td><td colspan="4" class="title c">Наличка</td></tr>
+      ${bill(20000, "Стоянка:", r.park)}
+      ${bill(10000, "Обед:", r.lunch)}
+      ${bill(5000, "Заправки:", r.fuel)}
+      ${bill(2000, "Прочее:", r.other)}
+      ${bill(1000, "Аванс:", r.adv)}
+      ${bill(500, "", "")}
+      <tr><td class="lab">Итог:</td><td class="n amt">${fmt(expSum(r))}</td><td colspan="4" class="n sum">${fmt(billsOnly)}</td></tr>
+      <tr><td class="lab">Монеты:</td><td class="n amt">${fmt(r.coins)}</td><td colspan="4"></td></tr>
+      <tr><td class="lab">Каспи</td><td class="n amt">${fmt(r.term)}</td><td colspan="4"></td></tr>
     </table>
     <table class="g bot">
       <tr><td colspan="2" class="title">Развоз:</td></tr>
@@ -978,14 +978,16 @@ function printOpis(){
     table.g{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:1.5mm}
     table.g td{padding:1px 3px;vertical-align:middle;border:1px solid #000;height:5.2mm}
     table.head td{height:5.6mm}
-    td.lab{width:22mm}
+    td.lab{width:26mm;text-align:left}
+    td.amt{width:16mm}
     td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:"Courier New",monospace}
-    td.nom{width:14mm}
-    td.star{width:4mm;text-align:center}
-    td.qty{width:8mm}
-    td.sum{width:16mm}
+    td.nom{width:11mm}
+    td.star{width:3.5mm;text-align:center}
+    td.qty{width:7mm}
+    td.sum{width:12mm}
     td.r{text-align:right}
-    td.title{font-weight:700}
+    td.c{text-align:center}
+    td.title{font-weight:700;background:#f3f3f3}
     table.bot{margin-top:2mm;width:100%}
     tr.tot td{font-weight:700}
     .stamp{margin:3mm auto 1mm;width:24mm;height:22mm;border:1.5px solid #000;text-align:center;line-height:22mm;font-size:10px}
