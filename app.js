@@ -1077,6 +1077,8 @@ function monthDriverTotals(y, m){
     let cash=0, adv=0, lunch=0, lunchCity=0, days=0, offs=0;
     const raions = {};
     const advDays = [];
+    const lunchDays = [];
+    const lunchAdvDays = [];
     for(const date of Object.keys(S.days||{})){
       if(!date.startsWith(prefix)) continue;
       const r = S.days[date][u.login];
@@ -1090,10 +1092,13 @@ function monthDriverTotals(y, m){
       if(ad) advDays.push({date, sum:ad});
       const ln = n(r.lunch);
       lunch += ln;
+      if(ln) lunchDays.push({date, sum:ln});
       const lr = lunchRate(r.raion);
       if(ln){
-        if(!lr) lunchCity += ln;
-        else if(ln > lr) lunchCity += ln - lr;
+        let extra = 0;
+        if(!lr) extra = ln;
+        else if(ln > lr) extra = ln - lr;
+        if(extra){ lunchCity += extra; lunchAdvDays.push({date, sum:extra, note: lr?`обед ${fmt(ln)} − ${fmt(lr)}`:`весь обед`}); }
       }
       const rn = (r.raion||"").trim();
       if(rn){
@@ -1106,7 +1111,7 @@ function monthDriverTotals(y, m){
       const rate = tripRate(rn);
       trip += info.alone * rate * 2 + info.pair * rate;
     }
-    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays });
+    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays, lunchDays, lunchAdvDays });
   }
   return rows;
 }
@@ -1133,8 +1138,8 @@ function renderMonthTotals(){
       <td class="n">${x.offs}</td>
       <td class="n">${fmtItog(x.cash)}</td>
       <td class="n"><button type="button" class="ghost" data-adv="${x.login}" style="padding:4px 8px">${fmt(x.adv)}</button></td>
-      <td class="n">${fmt(x.lunch)}</td>
-      <td class="n">${fmt(x.lunchCity)}</td>
+      <td class="n"><button type="button" class="ghost" data-lunch="${x.login}" style="padding:4px 8px">${fmt(x.lunch)}</button></td>
+      <td class="n"><button type="button" class="ghost" data-ladv="${x.login}" style="padding:4px 8px">${fmt(x.lunchCity)}</button></td>
       <td class="n">${fmt(x.trip)}</td>
       <td>${rs}</td>
     </tr>`;
@@ -1168,23 +1173,38 @@ function renderMonthTotals(){
     <button class="ghost" style="width:100%;margin-top:8px" id="c-trate-save">Сохранить суммы</button>
     <p class="muted" style="margin-top:8px">Обед аванс: сумма района 0 — весь обед в аванс. Иначе только разница сверх суммы.</p>
   </div>`;
+  function openDetail(login, kind, title, items, total){
+    const det = document.getElementById("c-adv-detail");
+    if(det && det.dataset.who===login && det.dataset.kind===kind){ det.remove(); return; }
+    const old = document.getElementById("c-adv-detail");
+    if(old) old.remove();
+    const list = (items||[]).slice().sort((a,b)=>a.date.localeCompare(b.date))
+      .map(d=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${d.date}${d.note?` <span class="muted">${d.note}</span>`:""}</span><b>${fmt(d.sum)}</b></div>`).join("") || `<p class="muted">Нет записей</p>`;
+    const el = document.createElement("div");
+    el.id = "c-adv-detail";
+    el.dataset.who = login;
+    el.dataset.kind = kind;
+    el.className = "card";
+    el.style.marginTop = "8px";
+    el.innerHTML = `<h3>${title}</h3>${list}<p class="muted" style="margin-top:6px">Всего ${fmt(total)}</p>`;
+    box.appendChild(el);
+  }
   box.querySelectorAll("[data-adv]").forEach(btn=>{
     btn.onclick = ()=>{
       const row = rows.find(r=>r.login===btn.dataset.adv);
-      if(!row) return;
-      const det = document.getElementById("c-adv-detail");
-      if(det && det.dataset.who===row.login){ det.remove(); return; }
-      const old = document.getElementById("c-adv-detail");
-      if(old) old.remove();
-      const list = (row.advDays||[]).sort((a,b)=>a.date.localeCompare(b.date))
-        .map(d=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${d.date}</span><b>${fmt(d.sum)}</b></div>`).join("") || `<p class="muted">Нет авансов</p>`;
-      const el = document.createElement("div");
-      el.id = "c-adv-detail";
-      el.dataset.who = row.login;
-      el.className = "card";
-      el.style.marginTop = "8px";
-      el.innerHTML = `<h3>Авансы · ${row.name}</h3>${list}<p class="muted" style="margin-top:6px">Всего ${fmt(row.adv)}</p>`;
-      box.appendChild(el);
+      if(row) openDetail(row.login, "adv", `Авансы · ${row.name}`, row.advDays, row.adv);
+    };
+  });
+  box.querySelectorAll("[data-lunch]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const row = rows.find(r=>r.login===btn.dataset.lunch);
+      if(row) openDetail(row.login, "lunch", `Обед · ${row.name}`, row.lunchDays, row.lunch);
+    };
+  });
+  box.querySelectorAll("[data-ladv]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const row = rows.find(r=>r.login===btn.dataset.ladv);
+      if(row) openDetail(row.login, "ladv", `Обед аванс · ${row.name}`, row.lunchAdvDays, row.lunchCity);
     };
   });
   const saveBtn = $("c-trate-save");
