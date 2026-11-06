@@ -611,12 +611,11 @@ function renderAllCal(){
     const rows = dayCrew(date);
     const work = rows.filter(x=>x.work);
     const ok = work.filter(x=>x.cls==="done").length;
-    const counting = work.filter(x=>x.cls==="wait").length;
     const notPaid = work.length - ok;
     let cls="daycell";
     if(work.length && ok===work.length) cls+=" paid";
-    else if(counting) cls+=" hands";
-    const extra = work.length ? `<div class="muted">${notPaid} не сдал · ${counting} считает</div>` : "";
+    else if(notPaid) cls+=" hands";
+    const extra = work.length ? `<div class="muted">${notPaid} не сдал · ${ok} сдал</div>` : "";
     cells+=`<button class="${cls}" data-adate="${date}"><div class="n">${d}</div>${extra}</button>`;
   }
   $("c-all-cal").innerHTML = dow+cells;
