@@ -1144,8 +1144,9 @@ function renderMonthTotals(){
     const lv = lrates[rn] || "";
     return `<div class="row" style="align-items:center;margin-top:4px;gap:8px">
       <span style="flex:1">${rn}</span>
-      <input data-trate="${rn}" value="${v}" inputmode="numeric" placeholder="команд." style="flex:0;width:100px" title="Командировочные">
-      <input data-lrate="${rn}" value="${lv}" inputmode="numeric" placeholder="обед" style="flex:0;width:100px" title="Обед за наш счёт">
+      <input data-trate="${rn}" value="${v}" inputmode="numeric" placeholder="команд." style="flex:0;width:90px" title="Командировочные">
+      <input data-lrate="${rn}" value="${lv}" inputmode="numeric" placeholder="обед" style="flex:0;width:90px" title="Обед за наш счёт">
+      <button type="button" class="ghost" data-rdel="${rn}" style="flex:0;padding:6px 10px">×</button>
     </div>`;
   }).join("");
   box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -1153,11 +1154,17 @@ function renderMonthTotals(){
     ${body}
     <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td></td></tr>
   </table>
-  <h3 style="margin-top:16px">Суммы по районам</h3>
-  <p class="muted">Слева — командировочные (за поездку). Справа — обед за наш счёт. Можно менять в любой момент.</p>
-  <div id="c-trate-list">${rateRows}</div>
-  <button class="ghost" style="width:100%;margin-top:8px" id="c-trate-save">Сохранить суммы</button>
-  <p class="muted" style="margin-top:8px">Обед аванс: если по району сумма 0 — весь обед в аванс. Если сумма указана — в аванс только разница сверх неё.</p>`;
+  <button type="button" class="ghost" id="c-raion-toggle" style="width:100%;margin-top:12px">Районы ▾</button>
+  <div id="c-raion-panel" style="display:none;margin-top:8px">
+    <p class="muted">Командировочные слева, обед за наш счёт справа. Можно добавлять и удалять районы.</p>
+    <div id="c-trate-list">${rateRows || `<p class="muted">Районов пока нет</p>`}</div>
+    <div class="row" style="margin-top:8px">
+      <input id="c-tot-raion-new" placeholder="новый район" style="flex:1">
+      <button type="button" class="ghost" id="c-tot-raion-add" style="flex:0">Добавить</button>
+    </div>
+    <button class="ghost" style="width:100%;margin-top:8px" id="c-trate-save">Сохранить суммы</button>
+    <p class="muted" style="margin-top:8px">Обед аванс: сумма района 0 — весь обед в аванс. Иначе только разница сверх суммы.</p>
+  </div>`;
   box.querySelectorAll("[data-adv]").forEach(btn=>{
     btn.onclick = ()=>{
       const row = rows.find(r=>r.login===btn.dataset.adv);
@@ -1195,6 +1202,35 @@ function renderMonthTotals(){
     toast("Суммы сохранены", "ok");
     renderMonthTotals();
   };
+  const tog = $("c-raion-toggle");
+  const panel = $("c-raion-panel");
+  if(tog && panel) tog.onclick = ()=>{
+    const open = panel.style.display !== "none";
+    panel.style.display = open ? "none" : "block";
+    tog.textContent = open ? "Районы ▾" : "Районы ▴";
+  };
+  const addR = $("c-tot-raion-add");
+  if(addR) addR.onclick = ()=>{
+    const inp = $("c-tot-raion-new");
+    const name = (inp && inp.value || "").trim();
+    if(!name) return;
+    const list = ensureRaions(S);
+    if(!list.includes(name)) list.push(name);
+    save(S);
+    toast("Район добавлен", "ok");
+    renderMonthTotals();
+  };
+  box.querySelectorAll("[data-rdel]").forEach(b=>{
+    b.onclick = ()=>{
+      const name = b.dataset.rdel;
+      S.raions = ensureRaions(S).filter(n=>n!==name);
+      delete ensureTripRates(S)[name];
+      delete ensureLunchRates(S)[name];
+      save(S);
+      toast("Район удалён", "ok");
+      renderMonthTotals();
+    };
+  });
 }
 if($("c-tot-prev")) $("c-tot-prev").onclick = ()=>{ C.m--; if(C.m<0){C.m=11;C.y--;} renderMonthTotals(); };
 if($("c-tot-next")) $("c-tot-next").onclick = ()=>{ C.m++; if(C.m>11){C.m=0;C.y++;} renderMonthTotals(); };

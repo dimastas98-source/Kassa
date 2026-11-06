@@ -198,10 +198,10 @@
       <label>Новый пароль</label>
       <input id="c-newpass" type="password">
       <button class="ghost" style="width:100%;margin-top:8px" id="c-passgo">Сохранить пароль</button>
-      <h2 style="margin-top:16px">Районы</h2>
-      <div id="c-raion-list" class="muted"></div>
-      <input id="c-raion-new" placeholder="новый район">
-      <button class="ghost" style="width:100%;margin-top:8px" id="c-raion-add">Добавить район</button>
+      <p class="muted" style="margin-top:16px">Районы и суммы — во вкладке «Итоги месяца».</p>
+      <div id="c-raion-list" class="muted" style="display:none"></div>
+      <input id="c-raion-new" style="display:none">
+      <button class="ghost" id="c-raion-add" style="display:none">Добавить район</button>
       <h2 style="margin-top:16px">Оплата минуса</h2>
       <label>Ссылка Kaspi QR</label>
       <input id="c-payurl" placeholder="https://qr.kaspi.kz/...">
@@ -272,7 +272,7 @@
     </div>
   </div>
   <iframe id="print-frame" title="print"></iframe>
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
   <script>
     if("serviceWorker" in navigator){
       navigator.serviceWorker.register("/sw.js").catch(function(){});
