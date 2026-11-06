@@ -763,7 +763,18 @@ function renderBoard(){
     inp.addEventListener("change", ()=>saveRow(inp.dataset.br||inp.dataset.bq));
   });
   $("c-board").querySelectorAll("[data-bpart]").forEach(sel=>{
-    sel.addEventListener("change", ()=>{ saveRow(sel.dataset.bpart); renderBoard(); });
+    sel.addEventListener("change", ()=>{
+      const login = sel.dataset.bpart;
+      const day = dayObj(C.date);
+      const me = day[login] || (day[login]=blank());
+      const prev = me.partner || "";
+      const next = sel.value || "";
+      if(prev && day[prev]) day[prev].partner = "";
+      me.partner = next;
+      if(next && day[next]) day[next].partner = login;
+      save(S);
+      renderBoard();
+    });
   });
   $("c-board").querySelectorAll("[data-braion]").forEach(sel=>{
     sel.addEventListener("change", ()=> saveRow(sel.dataset.braion));
