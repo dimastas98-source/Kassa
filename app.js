@@ -1134,13 +1134,12 @@ function renderMonthTotals(){
     }).join("; ") || "—";
     return `<tr>
       <td>${x.name}</td>
-      <td class="n">${x.days}</td>
-      <td class="n">${x.offs}</td>
       <td class="n">${fmtItog(x.cash)}</td>
       <td class="n"><button type="button" class="ghost" data-adv="${x.login}" style="padding:4px 8px">${fmt(x.adv)}</button></td>
-      <td class="n"><button type="button" class="ghost" data-lunch="${x.login}" style="padding:4px 8px">${fmt(x.lunch)}</button></td>
       <td class="n"><button type="button" class="ghost" data-ladv="${x.login}" style="padding:4px 8px">${fmt(x.lunchCity)}</button></td>
       <td class="n">${fmt(x.trip)}</td>
+      <td class="n">${x.days}</td>
+      <td class="n">${x.offs}</td>
       <td>${rs}</td>
     </tr>`;
   }).join("");
@@ -1158,9 +1157,9 @@ function renderMonthTotals(){
     </div>`;
   }).join("");
   box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <tr><th>Водитель</th><th class="n">Раб.</th><th class="n">Вых.</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Обед</th><th class="n">Обед аванс</th><th class="n">Командир.</th><th>Районы</th></tr>
+    <tr><th>Водитель</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Аванс обед</th><th class="n">Командир.</th><th class="n">Раб.</th><th class="n">Вых.</th><th>Районы</th></tr>
     ${body}
-    <tr class="sum"><td>Всего</td><td class="n">${sumDays}</td><td class="n">${sumOffs}</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td></td></tr>
+    <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td class="n">${sumDays}</td><td class="n">${sumOffs}</td><td></td></tr>
   </table>
   <button type="button" class="ghost" id="c-raion-toggle" style="width:100%;margin-top:12px">Районы ▾</button>
   <div id="c-raion-panel" style="display:none;margin-top:8px">
