@@ -55,7 +55,7 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
 .daycell .n{font-weight:700;font-size:14px}
 .daycell.empty{opacity:.35}
 .daycell.hands{border-color:var(--yellow);background:var(--yellow2)}
-.daycell.paid{border-color:var(--green);background:#14301f}
+.daycell.paid{border-color:#1fa971;background:#1fa971;color:#fff}
 .daycell.draft{border-color:#3d8bfd}
 @media(min-width:800px){
   body{padding:24px}

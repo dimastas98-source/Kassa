@@ -612,10 +612,11 @@ function renderAllCal(){
     const work = rows.filter(x=>x.work);
     const ok = work.filter(x=>x.cls==="done").length;
     const notPaid = work.length - ok;
+    const allPaid = work.length && ok===work.length;
     let cls="daycell";
-    if(work.length && ok===work.length) cls+=" paid";
+    if(allPaid) cls+=" paid";
     else if(notPaid) cls+=" hands";
-    const extra = work.length ? `<div class="muted">${notPaid} не сдал · ${ok} сдал</div>` : "";
+    const extra = (work.length && !allPaid) ? `<div class="muted">${notPaid} не сдал · ${ok} сдал</div>` : "";
     cells+=`<button class="${cls}" data-adate="${date}"><div class="n">${d}</div>${extra}</button>`;
   }
   $("c-all-cal").innerHTML = dow+cells;
