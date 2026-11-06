@@ -214,7 +214,8 @@ function blank(){
     razvoz:0, qr:0, ret:0, cons:0, term:0, raion:"",
     bills:{20000:0,10000:0,5000:0,2000:0,1000:0,500:0}, coins:0,
     park:0,lunch:0,fuel:0,other:0,adv:0,
-    status:"none" // none | closed | accepted
+    status:"none", // none | closed | accepted
+    off:false, partner:""
   };
 }
 function cashSum(r){
@@ -578,6 +579,7 @@ function dayCrew(date){
   const out=[];
   for(const u of (S.users||[])){
     const r = (S.days[date]&&S.days[date][u.login]) || null;
+    if(r && r.off) continue;
     const m = cashMark(r);
     const work = r && (n(r.razvoz) || r.status==="closed" || r.status==="accepted");
     out.push({u, r, mark: work ? m.text : (m.cls==="off" ? "не посчитана" : m.text), cls:m.cls, work:!!work});
@@ -708,14 +710,19 @@ function renderBoard(){
   }
   const sum = {off:0, wait:0, done:0};
   list.forEach(x=> sum[x.sk] = (sum[x.sk]||0)+1);
+  const partners = S.users.map(u=>`<option value="${u.login}">${u.name}</option>`).join("");
   $("c-board").innerHTML = `<p class="muted">посчитана ${sum.wait||0} · сдал ${sum.done||0} · не посчитана ${sum.off||0}</p>`+list.map(x=>{
     const m = cashMark(x.r);
-    return `<div class="board-row">
+    const off = !!x.r.off;
+    const psel = `<option value="">один (×2)</option>`+S.users.filter(u=>u.login!==x.u.login).map(u=>`<option value="${u.login}" ${x.r.partner===u.login?"selected":""}>${u.name}</option>`).join("");
+    return `<div class="board-row" style="${off?"opacity:.45":""}">
       <button class="ghost nm" data-open="${x.u.login}" style="text-align:left;padding:6px 8px">
-        ${x.u.name} <span class="pill ${m.cls}">${m.text}</span>
+        ${x.u.name} <span class="pill ${m.cls}">${off?"выходной":m.text}</span>
       </button>
-      <div><label>Развоз</label><input inputmode="numeric" data-br="${x.u.login}" value="${x.r.razvoz||""}"></div>
-      <div><label>QR</label><input inputmode="numeric" data-bq="${x.u.login}" value="${x.r.qr||""}"></div>
+      <div><label>Развоз</label><input inputmode="numeric" data-br="${x.u.login}" value="${x.r.razvoz||""}" ${off?"disabled":""}></div>
+      <div><label>QR</label><input inputmode="numeric" data-bq="${x.u.login}" value="${x.r.qr||""}" ${off?"disabled":""}></div>
+      <div><label>С кем</label><select data-bpart="${x.u.login}" ${off?"disabled":""}>${psel}</select></div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-boff="${x.u.login}" ${off?"checked":""}> выходной</label>
     </div>`;
   }).join("");
   $("c-board").querySelectorAll("[data-open]").forEach(b=>{
@@ -731,13 +738,23 @@ function renderBoard(){
     const r = dayObj(C.date)[login] || (dayObj(C.date)[login]=blank());
     const rz = $("c-board").querySelector(`[data-br="${login}"]`);
     const q = $("c-board").querySelector(`[data-bq="${login}"]`);
+    const part = $("c-board").querySelector(`[data-bpart="${login}"]`);
+    const off = $("c-board").querySelector(`[data-boff="${login}"]`);
     if(rz) r.razvoz = n(rz.value);
     if(q) r.qr = n(q.value);
+    if(part) r.partner = part.value;
+    if(off) r.off = off.checked;
     save(S);
   };
   $("c-board").querySelectorAll("[data-br],[data-bq]").forEach(inp=>{
     inp.addEventListener("input", ()=>saveRow(inp.dataset.br||inp.dataset.bq));
     inp.addEventListener("change", ()=>saveRow(inp.dataset.br||inp.dataset.bq));
+  });
+  $("c-board").querySelectorAll("[data-bpart]").forEach(sel=>{
+    sel.addEventListener("change", ()=>{ saveRow(sel.dataset.bpart); renderBoard(); });
+  });
+  $("c-board").querySelectorAll("[data-boff]").forEach(chk=>{
+    chk.addEventListener("change", ()=>{ saveRow(chk.dataset.boff); renderBoard(); });
   });
 }
 function driverStats(name){
@@ -1033,6 +1050,7 @@ function monthDriverTotals(y, m){
       if(!date.startsWith(prefix)) continue;
       const r = S.days[date][u.login];
       if(!r) continue;
+      if(r.off) continue;
       if(r.status!=="closed" && r.status!=="accepted") continue;
       days++;
       cash += itog(r);
@@ -1041,10 +1059,16 @@ function monthDriverTotals(y, m){
       lunch += ln;
       if(ln && isCity(r.raion)) lunchCity += ln;
       const rn = (r.raion||"").trim();
-      if(rn) raions[rn] = (raions[rn]||0)+1;
+      if(rn){
+        if(!raions[rn]) raions[rn] = {alone:0, pair:0};
+        if(r.partner) raions[rn].pair++; else raions[rn].alone++;
+      }
     }
     let trip = 0;
-    for(const [rn, cnt] of Object.entries(raions)) trip += cnt * tripRate(rn);
+    for(const [rn, info] of Object.entries(raions)){
+      const rate = tripRate(rn);
+      trip += info.alone * rate * 2 + info.pair * rate;
+    }
     if(days) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, raions, trip });
   }
   return rows;
@@ -1059,7 +1083,12 @@ function renderMonthTotals(){
   let sumCash=0, sumAdv=0, sumLunch=0, sumLunchCity=0, sumTrip=0;
   const body = rows.map(x=>{
     sumCash += x.cash; sumAdv += x.adv; sumLunch += x.lunch; sumLunchCity += x.lunchCity; sumTrip += x.trip;
-    const rs = Object.entries(x.raions).map(([k,v])=>`${k}: ${v}`).join(", ") || "—";
+    const rs = Object.entries(x.raions).map(([k,v])=>{
+      const parts = [];
+      if(v.alone) parts.push(v.alone+" один");
+      if(v.pair) parts.push(v.pair+" вдвоём");
+      return k+": "+parts.join(", ");
+    }).join("; ") || "—";
     return `<tr>
       <td>${x.name}</td>
       <td class="n">${fmtItog(x.cash)}</td>
