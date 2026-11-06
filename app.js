@@ -1086,6 +1086,7 @@ function monthDriverTotals(y, m){
     const advDays = [];
     const lunchDays = [];
     const lunchAdvDays = [];
+    const trips = [];
     for(const date of Object.keys(S.days||{})){
       if(!date.startsWith(prefix)) continue;
       const r = S.days[date][u.login];
@@ -1111,6 +1112,8 @@ function monthDriverTotals(y, m){
       if(rn){
         if(!raions[rn]) raions[rn] = {alone:0, pair:0};
         if(r.partner) raions[rn].pair++; else raions[rn].alone++;
+        const pn = r.partner ? (S.users.find(u=>u.login===r.partner)?.name || r.partner) : "один";
+        trips.push({date, raion:rn, with:pn});
       }
     }
     let trip = 0;
@@ -1118,7 +1121,7 @@ function monthDriverTotals(y, m){
       const rate = tripRate(rn);
       trip += info.alone * rate * 2 + info.pair * rate;
     }
-    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays, lunchDays, lunchAdvDays });
+    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays, lunchDays, lunchAdvDays, trips });
   }
   return rows;
 }
@@ -1133,12 +1136,7 @@ function renderMonthTotals(){
   const body = rows.map(x=>{
     sumCash += x.cash; sumAdv += x.adv; sumLunch += x.lunch; sumLunchCity += x.lunchCity; sumTrip += x.trip;
     sumDays += x.days; sumOffs += x.offs;
-    const rs = Object.entries(x.raions).map(([k,v])=>{
-      const parts = [];
-      if(v.alone) parts.push(v.alone+" один");
-      if(v.pair) parts.push(v.pair+" вдвоём");
-      return k+": "+parts.join(", ");
-    }).join("; ") || "—";
+    const rs = Object.entries(x.raions).map(([k,v])=>`${k}: ${v.alone+v.pair}`).join(", ") || "—";
     return `<tr>
       <td>${x.name}</td>
       <td class="n">${fmtItog(x.cash)}</td>
@@ -1147,7 +1145,7 @@ function renderMonthTotals(){
       <td class="n">${fmt(x.trip)}</td>
       <td class="n">${x.days}</td>
       <td class="n">${x.offs}</td>
-      <td>${rs}</td>
+      <td><button type="button" class="ghost" data-trips="${x.login}" style="padding:4px 8px;text-align:left">${rs}</button></td>
     </tr>`;
   }).join("");
   const rates = ensureTripRates(S);
@@ -1211,6 +1209,26 @@ function renderMonthTotals(){
     btn.onclick = ()=>{
       const row = rows.find(r=>r.login===btn.dataset.ladv);
       if(row) openDetail(row.login, "ladv", `Обед аванс · ${row.name}`, row.lunchAdvDays, row.lunchCity);
+    };
+  });
+  box.querySelectorAll("[data-trips]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const row = rows.find(r=>r.login===btn.dataset.trips);
+      if(!row) return;
+      const det = document.getElementById("c-adv-detail");
+      if(det && det.dataset.who===row.login && det.dataset.kind==="trips"){ det.remove(); return; }
+      const old = document.getElementById("c-adv-detail");
+      if(old) old.remove();
+      const list = (row.trips||[]).slice().sort((a,b)=>a.date.localeCompare(b.date))
+        .map(d=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${d.date} · ${d.raion}</span><b>${d.with}</b></div>`).join("") || `<p class="muted">Нет поездок</p>`;
+      const el = document.createElement("div");
+      el.id = "c-adv-detail";
+      el.dataset.who = row.login;
+      el.dataset.kind = "trips";
+      el.className = "card";
+      el.style.marginTop = "8px";
+      el.innerHTML = `<h3>Районы · ${row.name}</h3>${list}<p class="muted" style="margin-top:6px">Всего ${(row.trips||[]).length} поездок</p>`;
+      box.appendChild(el);
     };
   });
   const saveBtn = $("c-trate-save");
