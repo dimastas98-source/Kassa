@@ -771,13 +771,24 @@ function renderBoard(){
       const next = sel.value || "";
       if(prev && day[prev]) day[prev].partner = "";
       me.partner = next;
-      if(next && day[next]) day[next].partner = login;
+      if(next && day[next]){
+        day[next].partner = login;
+        if(me.raion) day[next].raion = me.raion;
+      }
       save(S);
       renderBoard();
     });
   });
   $("c-board").querySelectorAll("[data-braion]").forEach(sel=>{
-    sel.addEventListener("change", ()=> saveRow(sel.dataset.braion));
+    sel.addEventListener("change", ()=>{
+      const login = sel.dataset.braion;
+      saveRow(login);
+      const day = dayObj(C.date);
+      const me = day[login];
+      if(me && me.partner && day[me.partner]) day[me.partner].raion = me.raion;
+      save(S);
+      renderBoard();
+    });
   });
   $("c-board").querySelectorAll("[data-boff]").forEach(chk=>{
     chk.addEventListener("change", ()=>{ saveRow(chk.dataset.boff); renderBoard(); });
