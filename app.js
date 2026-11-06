@@ -1087,13 +1087,16 @@ function monthDriverTotals(y, m){
     const lunchDays = [];
     const lunchAdvDays = [];
     const trips = [];
+    const workDays = [];
+    const offDays = [];
     for(const date of Object.keys(S.days||{})){
       if(!date.startsWith(prefix)) continue;
       const r = S.days[date][u.login];
       if(!r) continue;
-      if(r.off){ offs++; continue; }
+      if(r.off){ offs++; offDays.push(date); continue; }
       if(r.status!=="closed" && r.status!=="accepted") continue;
       days++;
+      workDays.push(date);
       cash += itog(r);
       const ad = n(r.adv);
       adv += ad;
@@ -1121,7 +1124,7 @@ function monthDriverTotals(y, m){
       const rate = tripRate(rn);
       trip += info.alone * rate * 2 + info.pair * rate;
     }
-    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays, lunchDays, lunchAdvDays, trips });
+    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays, lunchDays, lunchAdvDays, trips, workDays, offDays });
   }
   return rows;
 }
@@ -1143,8 +1146,8 @@ function renderMonthTotals(){
       <td class="n"><button type="button" class="ghost" data-adv="${x.login}" style="padding:4px 8px">${fmt(x.adv)}</button></td>
       <td class="n"><button type="button" class="ghost" data-ladv="${x.login}" style="padding:4px 8px">${fmt(x.lunchCity)}</button></td>
       <td class="n">${fmt(x.trip)}</td>
-      <td class="n">${x.days}</td>
-      <td class="n">${x.offs}</td>
+      <td class="n"><button type="button" class="ghost" data-work="${x.login}" style="padding:4px 8px">${x.days}</button></td>
+      <td class="n"><button type="button" class="ghost" data-off="${x.login}" style="padding:4px 8px">${x.offs}</button></td>
       <td><button type="button" class="ghost" data-trips="${x.login}" style="padding:4px 8px;text-align:left">${rs}</button></td>
     </tr>`;
   }).join("");
@@ -1229,6 +1232,33 @@ function renderMonthTotals(){
       el.style.marginTop = "8px";
       el.innerHTML = `<h3>Районы · ${row.name}</h3>${list}<p class="muted" style="margin-top:6px">Всего ${(row.trips||[]).length} поездок</p>`;
       box.appendChild(el);
+    };
+  });
+  function openDays(login, kind, title, dates){
+    const det = document.getElementById("c-adv-detail");
+    if(det && det.dataset.who===login && det.dataset.kind===kind){ det.remove(); return; }
+    const old = document.getElementById("c-adv-detail");
+    if(old) old.remove();
+    const list = (dates||[]).slice().sort().map(d=>`<div style="padding:4px 0;border-bottom:1px solid var(--line)">${d}</div>`).join("") || `<p class="muted">Нет дней</p>`;
+    const el = document.createElement("div");
+    el.id = "c-adv-detail";
+    el.dataset.who = login;
+    el.dataset.kind = kind;
+    el.className = "card";
+    el.style.marginTop = "8px";
+    el.innerHTML = `<h3>${title}</h3>${list}<p class="muted" style="margin-top:6px">Всего ${(dates||[]).length}</p>`;
+    box.appendChild(el);
+  }
+  box.querySelectorAll("[data-work]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const row = rows.find(r=>r.login===btn.dataset.work);
+      if(row) openDays(row.login, "work", `Рабочие дни · ${row.name}`, row.workDays);
+    };
+  });
+  box.querySelectorAll("[data-off]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const row = rows.find(r=>r.login===btn.dataset.off);
+      if(row) openDays(row.login, "off", `Выходные · ${row.name}`, row.offDays);
     };
   });
   const saveBtn = $("c-trate-save");
