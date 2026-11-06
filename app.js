@@ -1068,7 +1068,10 @@ function monthDriverTotals(y, m){
       const ln = n(r.lunch);
       lunch += ln;
       const lr = lunchRate(r.raion);
-      if(ln && lr) lunchCity += Math.min(ln, lr);
+      if(ln){
+        if(!lr) lunchCity += ln;
+        else if(ln > lr) lunchCity += ln - lr;
+      }
       const rn = (r.raion||"").trim();
       if(rn){
         if(!raions[rn]) raions[rn] = {alone:0, pair:0};
@@ -1131,7 +1134,7 @@ function renderMonthTotals(){
   <p class="muted">Слева — командировочные (за поездку). Справа — обед за наш счёт. Можно менять в любой момент.</p>
   <div id="c-trate-list">${rateRows}</div>
   <button class="ghost" style="width:100%;margin-top:8px" id="c-trate-save">Сохранить суммы</button>
-  <p class="muted" style="margin-top:8px">Обед аванс — обед за наш счёт по сумме района (не больше того, что водитель записал).</p>`;
+  <p class="muted" style="margin-top:8px">Обед аванс: если по району сумма 0 — весь обед в аванс. Если сумма указана — в аванс только разница сверх неё.</p>`;
   box.querySelectorAll("[data-adv]").forEach(btn=>{
     btn.onclick = ()=>{
       const row = rows.find(r=>r.login===btn.dataset.adv);
