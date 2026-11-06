@@ -127,7 +127,20 @@
     <div class="row" id="c-tabs" style="margin-bottom:8px">
       <button class="ghost" id="c-tab-month">Календарь</button>
       <button class="ghost" id="c-tab-today">Развоз и QR</button>
+      <button class="ghost" id="c-tab-totals">Итоги месяца</button>
       <button class="ghost" id="c-open-staff">Сотрудники</button>
+    </div>
+    <div id="c-totals" class="card" style="display:none">
+      <div class="top">
+        <h2>Итоги месяца</h2>
+        <div class="row" style="flex:0">
+          <button class="ghost" id="c-tot-prev">←</button>
+          <div id="c-tot-month" class="pill"></div>
+          <button class="ghost" id="c-tot-next">→</button>
+        </div>
+      </div>
+      <p class="muted">Итог кассы, аванс, обед (в городе — обед аванс) и поездки по районам.</p>
+      <div id="c-tot-box" style="overflow-x:auto"></div>
     </div>
     <div id="c-monthall" class="card" style="display:none">
       <div class="top">
@@ -259,7 +272,7 @@
     </div>
   </div>
   <iframe id="print-frame" title="print"></iframe>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
   <script>
     if("serviceWorker" in navigator){
       navigator.serviceWorker.register("/sw.js").catch(function(){});

@@ -81,3 +81,9 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
   .card{border:1px solid #000;background:#fff}
   .toast,#ask-modal{display:none!important}
 }
+
+#c-tot-box table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+#c-tot-box th,#c-tot-box td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+#c-tot-box th{background:#1e2b3c}
+#c-tot-box td.n,#c-tot-box th.n{text-align:right;font-variant-numeric:tabular-nums}
+#c-tot-box tr.sum td{font-weight:700}

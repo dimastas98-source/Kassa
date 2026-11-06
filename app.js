@@ -533,9 +533,10 @@ function shiftDate(iso, days){
 function showCash(view){
   C.view = view;
   const tabs = $("c-tabs");
-  if(tabs) tabs.style.display = (view==="month"||view==="today"||view==="staff")?"flex":"none";
+  if(tabs) tabs.style.display = (view==="month"||view==="today"||view==="staff"||view==="totals")?"flex":"none";
   if($("c-monthall")) $("c-monthall").style.display = view==="month"?"block":"none";
   if($("c-daylist")) $("c-daylist").style.display = view==="daylist"?"block":"none";
+  if($("c-totals")) $("c-totals").style.display = view==="totals"?"block":"none";
   $("c-today").style.display = view==="today"?"block":"none";
   $("c-staff").style.display = view==="staff"?"block":"none";
   $("c-calwrap").style.display = view==="cal"?"block":"none";
@@ -544,6 +545,7 @@ function showCash(view){
   if(view==="month"){ $("c-path").textContent="календарь"; renderAllCal(); }
   if(view==="daylist"){ $("c-path").textContent=C.date; renderDayList(); }
   if(view==="today"){ $("c-path").textContent=C.date; renderBoard(); }
+  if(view==="totals"){ $("c-path").textContent="итоги месяца"; renderMonthTotals(); }
   if(view==="staff"){ $("c-path").textContent="сотрудники"; fillPayUrl(); renderRaionAdmin(); renderDrivers(); }
   if(view==="cal"){ $("c-path").textContent=(C.display||C.who)+" · "+t("calendar"); renderCal(); }
   if(view==="day"){ $("c-path").textContent=(C.display||C.who)+" · "+C.date; renderDay(); }
@@ -552,6 +554,7 @@ $("c-day-prev").onclick = ()=>{ C.date = shiftDate(C.date||today(), -1); renderB
 $("c-day-next").onclick = ()=>{ C.date = shiftDate(C.date||today(), 1); renderBoard(); $("c-path").textContent=C.date; };
 $("c-tab-month").onclick = ()=> showCash("month");
 $("c-tab-today").onclick = ()=> showCash("today");
+if($("c-tab-totals")) $("c-tab-totals").onclick = ()=> showCash("totals");
 $("c-open-staff").onclick = ()=> showCash("staff");
 $("c-back").onclick = ()=>{
   if($("c-daywrap").style.display!=="none") showCash("daylist");
@@ -1008,6 +1011,65 @@ function printOpis(){
   printHtml(html);
 }
 if($("c-print")) $("c-print").onclick = printOpis;
+
+function isCity(raion){
+  const s = String(raion||"").toLowerCase();
+  return s.includes("город") || s.includes("шымкент") || s.includes("астана") || s === "город";
+}
+function monthDriverTotals(y, m){
+  const prefix = `${y}-${String(m+1).padStart(2,"0")}-`;
+  const rows = [];
+  for(const u of (S.users||[])){
+    let cash=0, adv=0, lunch=0, lunchCity=0, days=0;
+    const raions = {};
+    for(const date of Object.keys(S.days||{})){
+      if(!date.startsWith(prefix)) continue;
+      const r = S.days[date][u.login];
+      if(!r) continue;
+      if(r.status!=="closed" && r.status!=="accepted") continue;
+      days++;
+      cash += itog(r);
+      adv += n(r.adv);
+      const ln = n(r.lunch);
+      lunch += ln;
+      if(ln && isCity(r.raion)) lunchCity += ln;
+      const rn = (r.raion||"").trim();
+      if(rn) raions[rn] = (raions[rn]||0)+1;
+    }
+    if(days) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, raions });
+  }
+  return rows;
+}
+function renderMonthTotals(){
+  const months=t("monthNames").split(",");
+  if($("c-tot-month")) $("c-tot-month").textContent = months[C.m]+" "+C.y;
+  const rows = monthDriverTotals(C.y, C.m);
+  const box = $("c-tot-box");
+  if(!box) return;
+  if(!rows.length){ box.innerHTML = `<p class="muted">Нет закрытых дней за этот месяц.</p>`; return; }
+  let sumCash=0, sumAdv=0, sumLunch=0, sumLunchCity=0;
+  const body = rows.map(x=>{
+    sumCash += x.cash; sumAdv += x.adv; sumLunch += x.lunch; sumLunchCity += x.lunchCity;
+    const rs = Object.entries(x.raions).map(([k,v])=>`${k}: ${v}`).join(", ") || "—";
+    return `<tr>
+      <td>${x.name}</td>
+      <td class="n">${fmtItog(x.cash)}</td>
+      <td class="n">${fmt(x.adv)}</td>
+      <td class="n">${fmt(x.lunch)}</td>
+      <td class="n">${fmt(x.lunchCity)}</td>
+      <td>${rs}</td>
+    </tr>`;
+  }).join("");
+  box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <tr><th>Водитель</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Обед</th><th class="n">Обед аванс</th><th>Районы</th></tr>
+    ${body}
+    <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td></td></tr>
+  </table>
+  <p class="muted" style="margin-top:8px">Обед аванс — обед, записанный в районе «город» / Шымкент / Астана. Остальной обед — обычный расход.</p>`;
+}
+if($("c-tot-prev")) $("c-tot-prev").onclick = ()=>{ C.m--; if(C.m<0){C.m=11;C.y--;} renderMonthTotals(); };
+if($("c-tot-next")) $("c-tot-next").onclick = ()=>{ C.m++; if(C.m>11){C.m=0;C.y++;} renderMonthTotals(); };
+
 function printDayTotal(){
   const date = C.date || today();
   const rows = (S.users||[]).map(u=>{
