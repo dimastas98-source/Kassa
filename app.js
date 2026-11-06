@@ -110,10 +110,17 @@ function setLang(l){
 const ONLINE = location.protocol.startsWith("http");
 const PAY_DEFAULT = "https://qr.kaspi.kz/1969965124051143278176170407929043063426";
 const DEFAULT_RAIONS = ["Туркестан","Кентау","Атабай","Шаулдер","Арыс","Сөзак","Сырыағаш","Жетысай","Вановка","Қарабұлақ","Ленгер","Шардара"];
-const emptyState = () => ({ users: [], cash: { login:"kassa", pass:"0000", payUrl: PAY_DEFAULT }, days: {}, raions: DEFAULT_RAIONS.slice() });
+const emptyState = () => ({ users: [], cash: { login:"kassa", pass:"0000", payUrl: PAY_DEFAULT }, days: {}, raions: DEFAULT_RAIONS.slice(), tripRates: {} });
 function ensureRaions(s){
   if(!s.raions || !s.raions.length) s.raions = DEFAULT_RAIONS.slice();
   return s.raions;
+}
+function ensureTripRates(s){
+  if(!s.tripRates || typeof s.tripRates !== "object") s.tripRates = {};
+  return s.tripRates;
+}
+function tripRate(name){
+  return n(ensureTripRates(S)[name]);
 }
 function fillRaionSelect(id, val){
   const el = $(id);
@@ -1036,7 +1043,9 @@ function monthDriverTotals(y, m){
       const rn = (r.raion||"").trim();
       if(rn) raions[rn] = (raions[rn]||0)+1;
     }
-    if(days) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, raions });
+    let trip = 0;
+    for(const [rn, cnt] of Object.entries(raions)) trip += cnt * tripRate(rn);
+    if(days) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, raions, trip });
   }
   return rows;
 }
@@ -1047,9 +1056,9 @@ function renderMonthTotals(){
   const box = $("c-tot-box");
   if(!box) return;
   if(!rows.length){ box.innerHTML = `<p class="muted">Нет закрытых дней за этот месяц.</p>`; return; }
-  let sumCash=0, sumAdv=0, sumLunch=0, sumLunchCity=0;
+  let sumCash=0, sumAdv=0, sumLunch=0, sumLunchCity=0, sumTrip=0;
   const body = rows.map(x=>{
-    sumCash += x.cash; sumAdv += x.adv; sumLunch += x.lunch; sumLunchCity += x.lunchCity;
+    sumCash += x.cash; sumAdv += x.adv; sumLunch += x.lunch; sumLunchCity += x.lunchCity; sumTrip += x.trip;
     const rs = Object.entries(x.raions).map(([k,v])=>`${k}: ${v}`).join(", ") || "—";
     return `<tr>
       <td>${x.name}</td>
@@ -1057,15 +1066,41 @@ function renderMonthTotals(){
       <td class="n">${fmt(x.adv)}</td>
       <td class="n">${fmt(x.lunch)}</td>
       <td class="n">${fmt(x.lunchCity)}</td>
+      <td class="n">${fmt(x.trip)}</td>
       <td>${rs}</td>
     </tr>`;
   }).join("");
+  const rates = ensureTripRates(S);
+  const allRaions = Array.from(new Set([...(S.raions||[]), ...Object.keys(rates)]));
+  const rateRows = allRaions.map(rn=>{
+    const v = rates[rn] || "";
+    return `<div class="row" style="align-items:center;margin-top:4px">
+      <span style="flex:1">${rn}</span>
+      <input data-trate="${rn}" value="${v}" inputmode="numeric" placeholder="0" style="flex:0;width:120px">
+    </div>`;
+  }).join("");
   box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <tr><th>Водитель</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Обед</th><th class="n">Обед аванс</th><th>Районы</th></tr>
+    <tr><th>Водитель</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Обед</th><th class="n">Обед аванс</th><th class="n">Командир.</th><th>Районы</th></tr>
     ${body}
-    <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td></td></tr>
+    <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td></td></tr>
   </table>
-  <p class="muted" style="margin-top:8px">Обед аванс — обед, записанный в районе «город» / Шымкент / Астана. Остальной обед — обычный расход.</p>`;
+  <h3 style="margin-top:16px">Суммы командировочных по районам</h3>
+  <p class="muted">Можно менять в любой момент. Сумма × количество поездок.</p>
+  <div id="c-trate-list">${rateRows}</div>
+  <button class="ghost" style="width:100%;margin-top:8px" id="c-trate-save">Сохранить суммы</button>
+  <p class="muted" style="margin-top:8px">Обед аванс — обед в районе «город» / Шымкент / Астана.</p>`;
+  const saveBtn = $("c-trate-save");
+  if(saveBtn) saveBtn.onclick = ()=>{
+    const rates = ensureTripRates(S);
+    document.querySelectorAll("[data-trate]").forEach(inp=>{
+      const name = inp.dataset.trate;
+      const val = n(inp.value);
+      if(val) rates[name] = val; else delete rates[name];
+    });
+    save(S);
+    toast("Суммы командировочных сохранены", "ok");
+    renderMonthTotals();
+  };
 }
 if($("c-tot-prev")) $("c-tot-prev").onclick = ()=>{ C.m--; if(C.m<0){C.m=11;C.y--;} renderMonthTotals(); };
 if($("c-tot-next")) $("c-tot-next").onclick = ()=>{ C.m++; if(C.m>11){C.m=0;C.y++;} renderMonthTotals(); };
