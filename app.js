@@ -110,7 +110,7 @@ function setLang(l){
 const ONLINE = location.protocol.startsWith("http");
 const PAY_DEFAULT = "https://qr.kaspi.kz/1969965124051143278176170407929043063426";
 const DEFAULT_RAIONS = ["Туркестан","Кентау","Атабай","Шаулдер","Арыс","Сөзак","Сырыағаш","Жетысай","Вановка","Қарабұлақ","Ленгер","Шардара"];
-const emptyState = () => ({ users: [], cash: { login:"kassa", pass:"0000", payUrl: PAY_DEFAULT }, days: {}, raions: DEFAULT_RAIONS.slice(), tripRates: {} });
+const emptyState = () => ({ users: [], cash: { login:"kassa", pass:"0000", payUrl: PAY_DEFAULT }, days: {}, raions: DEFAULT_RAIONS.slice(), tripRates: {}, lunchRates: {} });
 function ensureRaions(s){
   if(!s.raions || !s.raions.length) s.raions = DEFAULT_RAIONS.slice();
   return s.raions;
@@ -121,6 +121,13 @@ function ensureTripRates(s){
 }
 function tripRate(name){
   return n(ensureTripRates(S)[name]);
+}
+function ensureLunchRates(s){
+  if(!s.lunchRates || typeof s.lunchRates !== "object") s.lunchRates = {};
+  return s.lunchRates;
+}
+function lunchRate(name){
+  return n(ensureLunchRates(S)[name]);
 }
 function fillRaionSelect(id, val){
   const el = $(id);
@@ -1057,7 +1064,8 @@ function monthDriverTotals(y, m){
       adv += n(r.adv);
       const ln = n(r.lunch);
       lunch += ln;
-      if(ln && isCity(r.raion)) lunchCity += ln;
+      const lr = lunchRate(r.raion);
+      if(ln && lr) lunchCity += Math.min(ln, lr);
       const rn = (r.raion||"").trim();
       if(rn){
         if(!raions[rn]) raions[rn] = {alone:0, pair:0};
@@ -1100,12 +1108,15 @@ function renderMonthTotals(){
     </tr>`;
   }).join("");
   const rates = ensureTripRates(S);
-  const allRaions = Array.from(new Set([...(S.raions||[]), ...Object.keys(rates)]));
+  const lrates = ensureLunchRates(S);
+  const allRaions = Array.from(new Set([...(S.raions||[]), ...Object.keys(rates), ...Object.keys(lrates)]));
   const rateRows = allRaions.map(rn=>{
     const v = rates[rn] || "";
-    return `<div class="row" style="align-items:center;margin-top:4px">
+    const lv = lrates[rn] || "";
+    return `<div class="row" style="align-items:center;margin-top:4px;gap:8px">
       <span style="flex:1">${rn}</span>
-      <input data-trate="${rn}" value="${v}" inputmode="numeric" placeholder="0" style="flex:0;width:120px">
+      <input data-trate="${rn}" value="${v}" inputmode="numeric" placeholder="команд." style="flex:0;width:100px" title="Командировочные">
+      <input data-lrate="${rn}" value="${lv}" inputmode="numeric" placeholder="обед" style="flex:0;width:100px" title="Обед за наш счёт">
     </div>`;
   }).join("");
   box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -1113,21 +1124,27 @@ function renderMonthTotals(){
     ${body}
     <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td></td></tr>
   </table>
-  <h3 style="margin-top:16px">Суммы командировочных по районам</h3>
-  <p class="muted">Можно менять в любой момент. Сумма × количество поездок.</p>
+  <h3 style="margin-top:16px">Суммы по районам</h3>
+  <p class="muted">Слева — командировочные (за поездку). Справа — обед за наш счёт. Можно менять в любой момент.</p>
   <div id="c-trate-list">${rateRows}</div>
   <button class="ghost" style="width:100%;margin-top:8px" id="c-trate-save">Сохранить суммы</button>
-  <p class="muted" style="margin-top:8px">Обед аванс — обед в районе «город» / Шымкент / Астана.</p>`;
+  <p class="muted" style="margin-top:8px">Обед аванс — обед за наш счёт по сумме района (не больше того, что водитель записал).</p>`;
   const saveBtn = $("c-trate-save");
   if(saveBtn) saveBtn.onclick = ()=>{
     const rates = ensureTripRates(S);
+    const lrates = ensureLunchRates(S);
     document.querySelectorAll("[data-trate]").forEach(inp=>{
       const name = inp.dataset.trate;
       const val = n(inp.value);
       if(val) rates[name] = val; else delete rates[name];
     });
+    document.querySelectorAll("[data-lrate]").forEach(inp=>{
+      const name = inp.dataset.lrate;
+      const val = n(inp.value);
+      if(val) lrates[name] = val; else delete lrates[name];
+    });
     save(S);
-    toast("Суммы командировочных сохранены", "ok");
+    toast("Суммы сохранены", "ok");
     renderMonthTotals();
   };
 }
