@@ -1117,7 +1117,9 @@ function monthDriverTotals(y, m){
         if(!raions[rn]) raions[rn] = {alone:0, pair:0};
         if(r.partner) raions[rn].pair++; else raions[rn].alone++;
         const pn = r.partner ? (S.users.find(u=>u.login===r.partner)?.name || r.partner) : "один";
-        trips.push({date, raion:rn, with:pn});
+        const mult = r.partner ? 1 : 2;
+        const money = tripRate(rn) * mult;
+        trips.push({date, raion:rn, with:pn, money});
       }
     }
     let trip = 0;
@@ -1224,14 +1226,15 @@ function renderMonthTotals(){
       const old = document.getElementById("c-adv-detail");
       if(old) old.remove();
       const list = (row.trips||[]).slice().sort((a,b)=>a.date.localeCompare(b.date))
-        .map(d=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${d.date} · ${d.raion}</span><b>${d.with}</b></div>`).join("") || `<p class="muted">Нет поездок</p>`;
+        .map(d=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${d.date} · ${d.raion} · ${d.with}</span><b>${fmt(d.money||0)}</b></div>`).join("") || `<p class="muted">Нет поездок</p>`;
+      const total = (row.trips||[]).reduce((s,d)=>s+(d.money||0),0);
       const el = document.createElement("div");
       el.id = "c-adv-detail";
       el.dataset.who = row.login;
       el.dataset.kind = "trips";
       el.className = "card";
       el.style.marginTop = "8px";
-      el.innerHTML = `<h3>Районы · ${row.name}</h3>${list}<p class="muted" style="margin-top:6px">Всего ${(row.trips||[]).length} поездок</p>`;
+      el.innerHTML = `<h3>Районы · ${row.name}</h3>${list}<p class="muted" style="margin-top:6px">Поездок ${(row.trips||[]).length} · командировочные ${fmt(total)}</p>`;
       box.appendChild(el);
     };
   });
