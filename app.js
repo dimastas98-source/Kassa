@@ -719,11 +719,7 @@ function renderBoard(){
   list.forEach(x=> sum[x.sk] = (sum[x.sk]||0)+1);
   const partners = S.users.map(u=>`<option value="${u.login}">${u.name}</option>`).join("");
   const raions = ensureRaions(S);
-  $("c-board").innerHTML = `<div class="row" style="margin-bottom:8px;align-items:center">
-      <input id="c-board-raion-new" placeholder="новый район" style="flex:1">
-      <button type="button" class="ghost" id="c-board-raion-add" style="flex:0">Добавить район</button>
-    </div>
-    <p class="muted">посчитана ${sum.wait||0} · сдал ${sum.done||0} · не посчитана ${sum.off||0}</p>`+list.map(x=>{
+  $("c-board").innerHTML = `<p class="muted">посчитана ${sum.wait||0} · сдал ${sum.done||0} · не посчитана ${sum.off||0}</p>`+list.map(x=>{
     const m = cashMark(x.r);
     const off = !!x.r.off;
     const psel = `<option value="">один (×2)</option>`+S.users.filter(u=>u.login!==x.u.login).map(u=>`<option value="${u.login}" ${x.r.partner===u.login?"selected":""}>${u.name}</option>`).join("");
@@ -739,17 +735,6 @@ function renderBoard(){
       <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-boff="${x.u.login}" ${off?"checked":""}> выходной</label>
     </div>`;
   }).join("");
-  const addBtn = $("c-board-raion-add");
-  if(addBtn) addBtn.onclick = ()=>{
-    const inp = $("c-board-raion-new");
-    const name = (inp && inp.value || "").trim();
-    if(!name) return;
-    const list = ensureRaions(S);
-    if(!list.includes(name)) list.push(name);
-    save(S);
-    toast("Район добавлен", "ok");
-    renderBoard();
-  };
   $("c-board").querySelectorAll("[data-open]").forEach(b=>{
     b.onclick = ()=>{
       C.who=b.dataset.open;
