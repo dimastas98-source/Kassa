@@ -1074,14 +1074,14 @@ function monthDriverTotals(y, m){
   const prefix = `${y}-${String(m+1).padStart(2,"0")}-`;
   const rows = [];
   for(const u of (S.users||[])){
-    let cash=0, adv=0, lunch=0, lunchCity=0, days=0;
+    let cash=0, adv=0, lunch=0, lunchCity=0, days=0, offs=0;
     const raions = {};
     const advDays = [];
     for(const date of Object.keys(S.days||{})){
       if(!date.startsWith(prefix)) continue;
       const r = S.days[date][u.login];
       if(!r) continue;
-      if(r.off) continue;
+      if(r.off){ offs++; continue; }
       if(r.status!=="closed" && r.status!=="accepted") continue;
       days++;
       cash += itog(r);
@@ -1106,7 +1106,7 @@ function monthDriverTotals(y, m){
       const rate = tripRate(rn);
       trip += info.alone * rate * 2 + info.pair * rate;
     }
-    if(days) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, raions, trip, advDays });
+    if(days || offs) rows.push({ name:u.name||u.login, login:u.login, cash, adv, lunch, lunchCity, days, offs, raions, trip, advDays });
   }
   return rows;
 }
@@ -1117,9 +1117,10 @@ function renderMonthTotals(){
   const box = $("c-tot-box");
   if(!box) return;
   if(!rows.length){ box.innerHTML = `<p class="muted">Нет закрытых дней за этот месяц.</p>`; return; }
-  let sumCash=0, sumAdv=0, sumLunch=0, sumLunchCity=0, sumTrip=0;
+  let sumCash=0, sumAdv=0, sumLunch=0, sumLunchCity=0, sumTrip=0, sumDays=0, sumOffs=0;
   const body = rows.map(x=>{
     sumCash += x.cash; sumAdv += x.adv; sumLunch += x.lunch; sumLunchCity += x.lunchCity; sumTrip += x.trip;
+    sumDays += x.days; sumOffs += x.offs;
     const rs = Object.entries(x.raions).map(([k,v])=>{
       const parts = [];
       if(v.alone) parts.push(v.alone+" один");
@@ -1128,6 +1129,8 @@ function renderMonthTotals(){
     }).join("; ") || "—";
     return `<tr>
       <td>${x.name}</td>
+      <td class="n">${x.days}</td>
+      <td class="n">${x.offs}</td>
       <td class="n">${fmtItog(x.cash)}</td>
       <td class="n"><button type="button" class="ghost" data-adv="${x.login}" style="padding:4px 8px">${fmt(x.adv)}</button></td>
       <td class="n">${fmt(x.lunch)}</td>
@@ -1150,9 +1153,9 @@ function renderMonthTotals(){
     </div>`;
   }).join("");
   box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <tr><th>Водитель</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Обед</th><th class="n">Обед аванс</th><th class="n">Командир.</th><th>Районы</th></tr>
+    <tr><th>Водитель</th><th class="n">Раб.</th><th class="n">Вых.</th><th class="n">Итог кассы</th><th class="n">Аванс</th><th class="n">Обед</th><th class="n">Обед аванс</th><th class="n">Командир.</th><th>Районы</th></tr>
     ${body}
-    <tr class="sum"><td>Всего</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td></td></tr>
+    <tr class="sum"><td>Всего</td><td class="n">${sumDays}</td><td class="n">${sumOffs}</td><td class="n">${fmtItog(sumCash)}</td><td class="n">${fmt(sumAdv)}</td><td class="n">${fmt(sumLunch)}</td><td class="n">${fmt(sumLunchCity)}</td><td class="n">${fmt(sumTrip)}</td><td></td></tr>
   </table>
   <button type="button" class="ghost" id="c-raion-toggle" style="width:100%;margin-top:12px">Районы ▾</button>
   <div id="c-raion-panel" style="display:none;margin-top:8px">
