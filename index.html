@@ -236,7 +236,7 @@
       <label>Консигнация</label>
       <div class="row" style="align-items:center">
         <input id="c-cons" inputmode="numeric" placeholder="0" style="flex:1">
-        <button type="button" class="ghost" id="c-cons-plus" style="flex:0;width:48px">+</button>
+        <button type="button" class="ghost" id="c-cons-plus" style="flex0;width:48px">+</button>
       </div>
       <label>KASPI PAY</label>
       <input id="c-term" inputmode="numeric">
@@ -275,6 +275,7 @@
   <script src="app.js?v=38"></script>
   <script src="daymark-patch.js?v=39"></script>
   <script src="nav-patch.js?v=40"></script>
+  <script src="workdays-patch.js?v=41"></script>
   <script>
     if("serviceWorker" in navigator){
       navigator.serviceWorker.register("/sw.js").catch(function(){});
