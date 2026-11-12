@@ -218,6 +218,7 @@
       </div>
       <div id="c-month-sum" class="big">за месяц  0</div>
       <div class="cal" id="c-cal"></div>
+      <div id="c-cal-advlist"></div>
     </div>
     <div id="c-daywrap" class="card" style="display:none">
       <h2 id="c-day-title">День</h2>
@@ -276,6 +277,7 @@
   <script src="daymark-patch.js?v=39"></script>
   <script src="nav-patch.js?v=40"></script>
   <script src="workdays-patch.js?v=41"></script>
+  <script src="cal-adv-patch.js?v=42"></script>
   <script>
     if("serviceWorker" in navigator){
       navigator.serviceWorker.register("/sw.js").catch(function(){});
