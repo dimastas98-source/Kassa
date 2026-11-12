@@ -1,10 +1,10 @@
-/* patch: show raion + partner on closed/accepted days in driver calendar */
+/* patch: show raion + partner; off days red */
 (function(){
   if (typeof dayMark !== "function") return;
   const _dayMark = dayMark;
   dayMark = function(r){
     if(!r) return {cls:"daycell", mark:"", extra:""};
-    if(r.off) return {cls:"daycell", mark:"выходной", extra:""};
+    if(r.off) return {cls:"daycell alloff", mark:"выходной", extra:""};
     const base = _dayMark(r);
     if(r.status==="closed" || r.status==="accepted"){
       const i = itog(r);
@@ -17,7 +17,6 @@
       extra += `<div class="${i>0?"itog-minus":i<0?"itog-plus":"itog-ok"}">${fmtItog(i)}</div>`;
       base.extra = extra;
     } else if(r.raion || r.partner){
-      // draft / counts — still show where and with whom if known
       let extra = base.extra || "";
       if(r.raion) extra = `<div class="muted">${r.raion}</div>` + extra;
       const pn = r.partner
