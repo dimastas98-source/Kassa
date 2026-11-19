@@ -1,4 +1,4 @@
-/* patch: opis — bold razvoz title; Должен нал; Касса bold; Расход as before */
+/* patch: opis — bold razvoz + Касса; Должен нал normal */
 (function(){
   if (typeof printOpis !== "function" || typeof opisCardHtml !== "function") return;
 
@@ -36,7 +36,7 @@
       </table>
       <table class="g bot">
         <tr><td colspan="2" class="title">Развоз: ${fmt(r.razvoz)}</td></tr>
-        <tr><td>Должен нал:</td><td class="n bold">${fmt(must(r))}</td></tr>
+        <tr><td>Должен нал:</td><td class="n">${fmt(must(r))}</td></tr>
         <tr><td>Расход:</td><td class="n">${fmt(expSum(r))}</td></tr>
         <tr><td>Касса:</td><td class="n bold">${fmt(kassa)}</td></tr>
         <tr><td>Каспи:</td><td class="n">${fmt(r.term)}</td></tr>
