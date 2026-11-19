@@ -1,4 +1,4 @@
-/* patch: opis layout — bold razvoz, Факт нал, wider denom cells */
+/* patch: opis — same dimensions; bold razvoz title, Факт нал */
 (function(){
   if (typeof printOpis !== "function" || typeof opisCardHtml !== "function") return;
 
@@ -58,19 +58,20 @@
       .sheet{width:277mm;height:190mm;display:flex;justify-content:flex-end}
       .slip{width:76mm;font-size:10px;font-family:Arial,sans-serif;color:#000;border:1.5px solid #000;padding:2mm}
       table.g{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:1.5mm}
-      table.g td{padding:1px 2px;vertical-align:middle;border:1px solid #000;height:5.2mm}
+      table.g td{padding:1px 3px;vertical-align:middle;border:1px solid #000;height:5.2mm}
       table.head td{height:5.6mm}
-      table.bills col.c-lab{width:32%}
-      table.bills col.c-amt{width:18%}
-      table.bills col.c-nom{width:16%}
+      table.bills col.c-lab{width:38%}
+      table.bills col.c-amt{width:20%}
+      table.bills col.c-nom{width:12%}
       table.bills col.c-star{width:4%}
       table.bills col.c-qty{width:8%}
-      table.bills col.c-sum{width:22%}
+      table.bills col.c-sum{width:18%}
       td.lab{text-align:left;white-space:nowrap}
       td.amt{white-space:nowrap}
       td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:"Courier New",monospace}
       td.star{text-align:center}
-      td.nom,td.qty,td.sum{white-space:nowrap;padding-left:1px;padding-right:1px;font-size:9px}
+      td.nom,td.qty,td.sum{white-space:nowrap;padding-left:1px;padding-right:1px}
+      td.nom{font-size:8.5px}
       td.r{text-align:right}
       td.c{text-align:center}
       td.title{font-weight:700;background:#f3f3f3}
@@ -83,7 +84,7 @@
     </style></head><body>
     <div class="sheet">${card}</div>
     <div class="no-print"><button onclick="window.print()">Печать</button>
-    <span style="margin-left:8px;color:#555">A4 альбомная, масштаб 100%. Опись справа</span></div>
+    <span style="margin-left:8px;color:#555">A4 альбомная, масштаб 100%. Опись справа, уже и с рамкой</span></div>
     </body></html>`;
     printHtml(html);
   };
