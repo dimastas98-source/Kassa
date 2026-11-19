@@ -5,6 +5,9 @@
 Хранение:
 - если задан MONGO_URI — MongoDB (данные не слетают после деплоя)
 - иначе — файл data.json (на Render стирается при редеплое)
+
+При POST /api/state состояние сливается с текущим (по дням),
+чтобы параллельные правки кассира и водителей не затирали друг друга.
 """
 import json
 import os
@@ -36,6 +39,96 @@ def _normalize(s):
     return s
 
 
+def _day_rank(r):
+    if not isinstance(r, dict):
+        return 0
+    score = 0
+    st = r.get("status") or ""
+    if st == "accepted":
+        score += 300
+    elif st == "closed":
+        score += 200
+    elif any(r.get(k) for k in ("razvoz", "qr", "raion", "ret", "cons", "term", "park", "lunch", "fuel", "other", "adv", "coins")):
+        score += 100
+    if r.get("off"):
+        score += 40
+    if r.get("partner"):
+        score += 5
+    bills = r.get("bills") or {}
+    if isinstance(bills, dict) and any(bills.values()):
+        score += 10
+    return score
+
+
+def _pick_day(a, b):
+    if not a:
+        return b
+    if not b:
+        return a
+    ta = int(a.get("updatedAt") or 0)
+    tb = int(b.get("updatedAt") or 0)
+    if ta != tb:
+        return a if ta > tb else b
+    return a if _day_rank(a) >= _day_rank(b) else b
+
+
+def _merge_days(local_days, remote_days):
+    out = {}
+    dates = set(list((local_days or {}).keys()) + list((remote_days or {}).keys()))
+    for date in dates:
+        out[date] = {}
+        L = (local_days or {}).get(date) or {}
+        R = (remote_days or {}).get(date) or {}
+        if not isinstance(L, dict):
+            L = {}
+        if not isinstance(R, dict):
+            R = {}
+        logins = set(list(L.keys()) + list(R.keys()))
+        for login in logins:
+            out[date][login] = _pick_day(L.get(login), R.get(login))
+    return out
+
+
+def _merge_users(a, b):
+    m = {}
+    for src in (b or [], a or []):
+        for u in src:
+            if not isinstance(u, dict):
+                continue
+            login = u.get("login")
+            if not login:
+                continue
+            prev = m.get(login) or {}
+            merged = dict(prev)
+            merged.update(u)
+            if not (merged.get("name") or "").strip() and (prev.get("name") or "").strip():
+                merged["name"] = prev["name"]
+            if not (merged.get("pass") or "").strip() and (prev.get("pass") or "").strip():
+                merged["pass"] = prev["pass"]
+            m[login] = merged
+    return list(m.values())
+
+
+def merge_state(incoming, current):
+    """Слить входящее состояние с текущим на сервере."""
+    inc = _normalize(incoming if isinstance(incoming, dict) else {})
+    cur = _normalize(current if isinstance(current, dict) else {})
+    out = {
+        "users": _merge_users(inc.get("users"), cur.get("users")),
+        "cash": {},
+        "days": _merge_days(inc.get("days"), cur.get("days")),
+        "raions": list(dict.fromkeys((cur.get("raions") or []) + (inc.get("raions") or []))),
+        "tripRates": dict(cur.get("tripRates") or {}, **(inc.get("tripRates") or {})),
+        "lunchRates": dict(cur.get("lunchRates") or {}, **(inc.get("lunchRates") or {})),
+    }
+    cash = dict(cur.get("cash") or {})
+    cash.update(inc.get("cash") or {})
+    if not cash.get("payUrl") and (cur.get("cash") or {}).get("payUrl"):
+        cash["payUrl"] = cur["cash"]["payUrl"]
+    out["cash"] = cash
+    return _normalize(out)
+
+
 def _mongo_col():
     global _mongo
     if not MONGO_URI:
@@ -44,7 +137,6 @@ def _mongo_col():
         from pymongo import MongoClient
 
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=8000)
-        # проверка связи при первом обращении
         client.admin.command("ping")
         _mongo = client[MONGO_DB][MONGO_COL]
         print("MongoDB: ok, db=%s col=%s" % (MONGO_DB, MONGO_COL))
@@ -94,7 +186,6 @@ def write_state(s):
             return
         except Exception as e:
             print("MongoDB write error:", e)
-            # падаем в файл как запасной вариант
 
     tmp = DATA + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -145,10 +236,13 @@ class Handler(SimpleHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(n).decode("utf-8") if n else "{}"
         try:
-            s = json.loads(body)
+            incoming = json.loads(body)
         except json.JSONDecodeError:
             return self._json(400, {"error": "bad json"})
-        write_state(s)
+        # Merge with current server state so concurrent clients don't clobber each other
+        current = read_state()
+        merged = merge_state(incoming, current)
+        write_state(merged)
         return self._json(200, {"ok": True})
 
 
