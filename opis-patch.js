@@ -1,11 +1,18 @@
-/* patch: opis — bold razvoz + Касса; Должен нал normal */
+/* patch: opis — актуальные формулы, QR офис, платежи, условные строки */
 (function(){
   if (typeof printOpis !== "function" || typeof opisCardHtml !== "function") return;
+
+  function paysOf(r){
+    if(typeof paySum === "function") return paySum(r);
+    if(!r.payments || !Array.isArray(r.payments)) return 0;
+    return r.payments.reduce((s,p)=>s+n(p.sum),0);
+  }
 
   opisCardHtml = function(r, name, date){
     const billsOnly = BILLS.reduce((a,b)=>a+n(r.bills&&r.bills[b])*b,0);
     const kassa = billsOnly + n(r.coins);
     const qty = b => n(r.bills && r.bills[b]);
+    const pays = paysOf(r);
     const bill = (nom, label, sum) => `<tr>
       <td class="lab">${label}</td>
       <td class="n amt">${sum===""?"":fmt(sum)}</td>
@@ -14,6 +21,32 @@
       <td class="n qty">${qty(nom)}</td>
       <td class="n sum">${fmt(qty(nom)*nom)}</td>
     </tr>`;
+
+    let botRows = "";
+    botRows += `<tr><td colspan="2" class="title">Развоз: ${fmt(r.razvoz)}</td></tr>`;
+    botRows += `<tr><td>Должен нал:</td><td class="n">${fmt(must(r))}</td></tr>`;
+    if(n(r.term)) botRows += `<tr><td>KASPI PAY:</td><td class="n">${fmt(r.term)}</td></tr>`;
+    if(n(r.qr)) botRows += `<tr><td>QR офис:</td><td class="n">${fmt(r.qr)}</td></tr>`;
+    if(pays) botRows += `<tr><td>Платежи:</td><td class="n">${fmt(pays)}</td></tr>`;
+    botRows += `<tr><td>Расход:</td><td class="n">${fmt(expSum(r))}</td></tr>`;
+    botRows += `<tr><td>Касса:</td><td class="n bold">${fmt(kassa)}</td></tr>`;
+    botRows += `<tr class="tot"><td>Итог:</td><td class="n">${fmtItog(itog(r))}</td></tr>`;
+
+    // payments detail lines if several
+    let payDetail = "";
+    if(r.payments && r.payments.length){
+      const pad = x => String(x).padStart(2,"0");
+      const lines = r.payments.map(p=>{
+        let dt = "";
+        if(p.at){
+          const d = new Date(p.at);
+          if(!isNaN(d.getTime())) dt = pad(d.getDate())+"."+pad(d.getMonth()+1)+" "+pad(d.getHours())+":"+pad(d.getMinutes());
+        }
+        return `<tr><td class="lab" style="font-size:8px">${dt}${p.note?" "+p.note:""}</td><td class="n" style="font-size:8px">${fmt(p.sum)}</td></tr>`;
+      }).join("");
+      payDetail = lines;
+    }
+
     return `<div class="slip">
       <table class="g head">
         <tr><td>Дата: ${fmtDateRu(date)}</td><td class="r">Район: ${r.raion||"—"}</td></tr>
@@ -32,15 +65,12 @@
         ${bill(500, "", "")}
         <tr><td class="lab">Итог:</td><td class="n amt">${fmt(expSum(r))}</td><td colspan="4" class="n sum">${fmt(billsOnly)}</td></tr>
         <tr><td class="lab">Монеты:</td><td class="n amt">${fmt(r.coins)}</td><td colspan="4"></td></tr>
-        <tr><td class="lab">Каспи</td><td class="n amt">${fmt(r.term)}</td><td colspan="4"></td></tr>
+        ${n(r.term)?`<tr><td class="lab">KASPI PAY</td><td class="n amt">${fmt(r.term)}</td><td colspan="4"></td></tr>`:""}
+        ${n(r.qr)?`<tr><td class="lab">QR офис</td><td class="n amt">${fmt(r.qr)}</td><td colspan="4"></td></tr>`:""}
       </table>
       <table class="g bot">
-        <tr><td colspan="2" class="title">Развоз: ${fmt(r.razvoz)}</td></tr>
-        <tr><td>Должен нал:</td><td class="n">${fmt(must(r))}</td></tr>
-        <tr><td>Расход:</td><td class="n">${fmt(expSum(r))}</td></tr>
-        <tr><td>Касса:</td><td class="n bold">${fmt(kassa)}</td></tr>
-        <tr><td>Каспи:</td><td class="n">${fmt(r.term)}</td></tr>
-        <tr class="tot"><td>Итог:</td><td class="n">${fmtItog(itog(r))}</td></tr>
+        ${botRows}
+        ${payDetail}
       </table>
       <div class="stamp">М.П.</div>
     </div>`;
