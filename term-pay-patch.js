@@ -1,9 +1,8 @@
 /* patch:
  * 1) must() = razvoz - qr - ret - cons  (без term / KASPI PAY)
- * 2) платежи на терминал кассира: несколько, с датой и временем
+ * 2) платежи на терминал кассира — сразу под KASPI PAY, без лишних надписей
  */
 (function(){
-  // --- формула: KASPI PAY не трогает нал ---
   if (typeof must === "function") {
     must = function(r){
       return n(r.razvoz) - n(r.qr) - n(r.ret) - n(r.cons);
@@ -30,40 +29,61 @@
     return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
   }
 
+  function findTermAnchor(){
+    // insert payments block right after #c-term
+    const term = document.getElementById("c-term");
+    if(term) return term;
+    return null;
+  }
+
   function renderPaymentsBox(){
-    const box = document.getElementById("c-day-rest");
-    if(!box || typeof recCash !== "function") return;
+    if(typeof recCash !== "function") return;
     const r = recCash();
     if(!r) return;
     const list = ensurePayments(r);
     const rows = list.map((p,i)=>`
       <div class="row" style="justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);gap:6px">
-        <span style="flex:1">${fmtDtLocal(p.at)}${p.note?` <span class="muted">· ${p.note}</span>`:""}</span>
+        <span style="flex:1">${fmtDtLocal(p.at)}${p.note?` · ${p.note}`:""}</span>
         <b>${fmt(p.sum)}</b>
         <button type="button" class="ghost" data-paydel="${i}" style="flex:0;padding:4px 8px">×</button>
-      </div>`).join("") || `<p class="muted">Платежей пока нет</p>`;
+      </div>`).join("");
     const total = paySum(r);
     const i = itog(r);
     const left = i - total;
 
-    // keep existing totals block, append payments
     let payEl = document.getElementById("c-payments");
     if(!payEl){
       payEl = document.createElement("div");
       payEl.id = "c-payments";
-      payEl.style.marginTop = "12px";
-      box.appendChild(payEl);
+      payEl.style.marginTop = "8px";
+      const term = findTermAnchor();
+      if(term && term.parentNode){
+        // after term input
+        if(term.nextSibling) term.parentNode.insertBefore(payEl, term.nextSibling);
+        else term.parentNode.appendChild(payEl);
+      } else {
+        const box = document.getElementById("c-day-rest");
+        if(box) box.appendChild(payEl);
+      }
+    } else {
+      // keep under term if misplaced
+      const term = findTermAnchor();
+      if(term && term.parentNode && payEl.previousElementSibling !== term){
+        if(term.nextSibling) term.parentNode.insertBefore(payEl, term.nextSibling);
+        else term.parentNode.appendChild(payEl);
+      }
     }
+
     payEl.innerHTML = `
-      <h3 style="margin:8px 0 4px">Платежи (терминал)</h3>
-      <p class="muted" style="margin:0 0 6px">Оплаты на ваш терминал при сдаче кассы. Несколько записей, дата и время.</p>
-      ${rows}
-      <p style="margin-top:6px">Всего платежей <b>${fmt(total)}</b>${i>0?` · остаток минуса <b>${fmt(left)}</b>`:""}</p>
-      <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
-        <input id="c-pay-sum" inputmode="numeric" placeholder="сумма" style="flex:1;min-width:90px">
-        <input id="c-pay-at" type="datetime-local" style="flex:1;min-width:160px">
-        <input id="c-pay-note" placeholder="коммент" style="flex:1;min-width:100px">
-        <button type="button" class="ghost" id="c-pay-add" style="flex:0">+ платёж</button>
+      <div style="margin-top:4px">
+        ${rows}
+        <p style="margin:6px 0 0">Платежи <b>${fmt(total)}</b>${i>0?` · остаток <b>${fmt(left)}</b>`:""}</p>
+        <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
+          <input id="c-pay-sum" inputmode="numeric" placeholder="сумма" style="flex:1;min-width:90px">
+          <input id="c-pay-at" type="datetime-local" style="flex:1;min-width:160px">
+          <input id="c-pay-note" placeholder="коммент" style="flex:1;min-width:100px">
+          <button type="button" class="ghost" id="c-pay-add" style="flex:0">+</button>
+        </div>
       </div>`;
 
     const at = document.getElementById("c-pay-at");
@@ -85,7 +105,7 @@
       const atEl = document.getElementById("c-pay-at");
       const noteEl = document.getElementById("c-pay-note");
       const sum = n(sumEl && sumEl.value);
-      if(!sum){ toast("Укажите сумму платежа", "err"); return; }
+      if(!sum){ toast("Укажите сумму", "err"); return; }
       let atVal = (atEl && atEl.value) || "";
       if(atVal && atVal.length === 16) atVal = atVal + ":00";
       const iso = atVal ? new Date(atVal).toISOString() : new Date().toISOString();
@@ -97,38 +117,26 @@
       });
       rr.updatedAt = Date.now();
       save(S);
-      toast("Платёж добавлен", "ok");
+      toast("Добавлено", "ok");
       renderDay();
     };
   }
 
-  // hook after renderDay
   if(typeof renderDay === "function"){
     const _rd = renderDay;
     renderDay = function(){
       _rd.apply(this, arguments);
-      // refresh must/itog text (formula changed)
       try{
         const r = recCash();
         const box = document.getElementById("c-day-rest");
         if(box && r){
           box.innerHTML = `
             <p>Касса нал. <b>${fmt(cashSum(r))}</b> · расход <b>${fmt(expSum(r))}</b></p>
-            <p>Должен нал. <b>${fmt(must(r))}</b> <span class="muted">(без KASPI PAY)</span></p>
-            <p>KASPI PAY <b>${fmt(r.term)}</b> <span class="muted">— справочно, на нал не влияет</span></p>
+            <p>Должен нал. <b>${fmt(must(r))}</b></p>
             <p class="big ${itog(r)>0?"itog-minus":itog(r)<0?"itog-plus":"itog-ok"}">Итог ${fmtItog(itog(r))}</p>`;
         }
       }catch(e){}
       renderPaymentsBox();
-    };
-  }
-
-  // also refresh driver must display after paintTotals
-  if(typeof paintTotals === "function"){
-    const _pt = paintTotals;
-    paintTotals = function(){
-      _pt.apply(this, arguments);
-      // must already uses new formula
     };
   }
 })();
