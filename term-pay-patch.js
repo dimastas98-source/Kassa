@@ -1,7 +1,7 @@
 /* patch:
  * must = razvoz - qr - ret - cons
  * itog = must - cash - exp - term - payments
- * внизу порядок: Должен нал, KASPI PAY, QR офис, Касса нал · расход, Итог
+ * внизу: Должен нал; KASPI/QR только если заполнены; Касса·расход; Итог
  */
 (function(){
   function ensurePayments(r){
@@ -34,15 +34,11 @@
   }
 
   function relabelQrOffice(){
-    const wrap = document.getElementById("c-daywrap");
-    if(!wrap) return;
-    // label before #c-qr
     const qr = document.getElementById("c-qr");
-    if(qr){
-      let lab = qr.previousElementSibling;
-      while(lab && lab.tagName !== "LABEL") lab = lab.previousElementSibling;
-      if(lab && lab.tagName === "LABEL") lab.textContent = "QR офис";
-    }
+    if(!qr) return;
+    let lab = qr.previousElementSibling;
+    while(lab && lab.tagName !== "LABEL") lab = lab.previousElementSibling;
+    if(lab && lab.tagName === "LABEL") lab.textContent = "QR офис";
   }
 
   function findTermAnchor(){
@@ -139,12 +135,15 @@
         const box = document.getElementById("c-day-rest");
         if(box && r){
           const pays = paySum(r);
+          const termLine = n(r.term) ? `<p>KASPI PAY <b>${fmt(r.term)}</b></p>` : "";
+          const qrLine = n(r.qr) ? `<p>QR офис <b>${fmt(r.qr)}</b></p>` : "";
+          const payLine = pays ? `<p>Платежи <b>${fmt(pays)}</b></p>` : "";
           box.innerHTML = `
             <p>Должен нал. <b>${fmt(must(r))}</b></p>
-            <p>KASPI PAY <b>${fmt(r.term)}</b></p>
-            <p>QR офис <b>${fmt(r.qr)}</b></p>
+            ${termLine}
+            ${qrLine}
             <p>Касса нал. <b>${fmt(cashSum(r))}</b> · расход <b>${fmt(expSum(r))}</b></p>
-            ${pays?`<p>Платежи <b>${fmt(pays)}</b></p>`:""}
+            ${payLine}
             <p class="big ${itog(r)>0?"itog-minus":itog(r)<0?"itog-plus":"itog-ok"}">Итог ${fmtItog(itog(r))}</p>`;
         }
       }catch(e){}
