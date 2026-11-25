@@ -1,7 +1,7 @@
 /* patch:
  * must = razvoz - qr - ret - cons
  * itog = must - cash - exp - term - payments
- * внизу: Должен нал; KASPI/QR только если заполнены; Касса·расход; Итог
+ * блок платежей называется QR офис
  */
 (function(){
   function ensurePayments(r){
@@ -82,7 +82,7 @@
       <div style="margin-top:4px">
         ${rows}
         <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
-          <input id="c-pay-sum" inputmode="numeric" placeholder="сумма" style="flex:1;min-width:90px">
+          <input id="c-pay-sum" inputmode="numeric" placeholder="QR офис" style="flex:1;min-width:90px">
           <input id="c-pay-at" type="datetime-local" style="flex:1;min-width:160px">
           <input id="c-pay-note" placeholder="коммент" style="flex:1;min-width:100px">
           <button type="button" class="ghost" id="c-pay-add" style="flex:0">+</button>
@@ -136,14 +136,14 @@
         if(box && r){
           const pays = paySum(r);
           const termLine = n(r.term) ? `<p>KASPI PAY <b>${fmt(r.term)}</b></p>` : "";
-          const qrLine = n(r.qr) ? `<p>QR офис <b>${fmt(r.qr)}</b></p>` : "";
-          const payLine = pays ? `<p>Платежи <b>${fmt(pays)}</b></p>` : "";
+          // QR офис: поле qr и/или список — одной строкой
+          const qrTotal = n(r.qr) + pays;
+          const qrLine = qrTotal ? `<p>QR офис <b>${fmt(qrTotal)}</b></p>` : "";
           box.innerHTML = `
             <p>Должен нал. <b>${fmt(must(r))}</b></p>
             ${termLine}
             ${qrLine}
             <p>Касса нал. <b>${fmt(cashSum(r))}</b> · расход <b>${fmt(expSum(r))}</b></p>
-            ${payLine}
             <p class="big ${itog(r)>0?"itog-minus":itog(r)<0?"itog-plus":"itog-ok"}">Итог ${fmtItog(itog(r))}</p>`;
         }
       }catch(e){}
