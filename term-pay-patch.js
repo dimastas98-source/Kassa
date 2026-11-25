@@ -1,7 +1,7 @@
 /* patch:
- * must = razvoz - qr - ret - cons  (нал без KASPI PAY)
+ * must = razvoz - qr - ret - cons
  * itog = must - cash - exp - term - payments
- * платежи сразу под KASPI PAY, без лишних надписей
+ * внизу порядок: Должен нал, KASPI PAY, QR офис, Касса нал · расход, Итог
  */
 (function(){
   function ensurePayments(r){
@@ -13,16 +13,12 @@
   }
   window.paySum = paySum;
 
-  if (typeof must === "function") {
-    must = function(r){
-      return n(r.razvoz) - n(r.qr) - n(r.ret) - n(r.cons);
-    };
-  }
-  if (typeof itog === "function") {
-    itog = function(r){
-      return must(r) - cashSum(r) - expSum(r) - n(r.term) - paySum(r);
-    };
-  }
+  must = function(r){
+    return n(r.razvoz) - n(r.qr) - n(r.ret) - n(r.cons);
+  };
+  itog = function(r){
+    return must(r) - cashSum(r) - expSum(r) - n(r.term) - paySum(r);
+  };
 
   function fmtDtLocal(iso){
     if(!iso) return "—";
@@ -35,6 +31,18 @@
     const d = new Date();
     const pad = x => String(x).padStart(2,"0");
     return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+  }
+
+  function relabelQrOffice(){
+    const wrap = document.getElementById("c-daywrap");
+    if(!wrap) return;
+    // label before #c-qr
+    const qr = document.getElementById("c-qr");
+    if(qr){
+      let lab = qr.previousElementSibling;
+      while(lab && lab.tagName !== "LABEL") lab = lab.previousElementSibling;
+      if(lab && lab.tagName === "LABEL") lab.textContent = "QR офис";
+    }
   }
 
   function findTermAnchor(){
@@ -125,13 +133,18 @@
     const _rd = renderDay;
     renderDay = function(){
       _rd.apply(this, arguments);
+      relabelQrOffice();
       try{
         const r = recCash();
         const box = document.getElementById("c-day-rest");
         if(box && r){
+          const pays = paySum(r);
           box.innerHTML = `
-            <p>Касса нал. <b>${fmt(cashSum(r))}</b> · расход <b>${fmt(expSum(r))}</b></p>
             <p>Должен нал. <b>${fmt(must(r))}</b></p>
+            <p>KASPI PAY <b>${fmt(r.term)}</b></p>
+            <p>QR офис <b>${fmt(r.qr)}</b></p>
+            <p>Касса нал. <b>${fmt(cashSum(r))}</b> · расход <b>${fmt(expSum(r))}</b></p>
+            ${pays?`<p>Платежи <b>${fmt(pays)}</b></p>`:""}
             <p class="big ${itog(r)>0?"itog-minus":itog(r)<0?"itog-plus":"itog-ok"}">Итог ${fmtItog(itog(r))}</p>`;
         }
       }catch(e){}
