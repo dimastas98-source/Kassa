@@ -1,14 +1,9 @@
 /* patch:
- * 1) must() = razvoz - qr - ret - cons  (без term / KASPI PAY)
- * 2) платежи на терминал кассира — сразу под KASPI PAY, без лишних надписей
+ * must = razvoz - qr - ret - cons  (нал без KASPI PAY)
+ * itog = must - cash - exp - term - payments
+ * платежи сразу под KASPI PAY, без лишних надписей
  */
 (function(){
-  if (typeof must === "function") {
-    must = function(r){
-      return n(r.razvoz) - n(r.qr) - n(r.ret) - n(r.cons);
-    };
-  }
-
   function ensurePayments(r){
     if(!r.payments || !Array.isArray(r.payments)) r.payments = [];
     return r.payments;
@@ -16,6 +11,19 @@
   function paySum(r){
     return ensurePayments(r).reduce((s,p)=>s+n(p.sum),0);
   }
+  window.paySum = paySum;
+
+  if (typeof must === "function") {
+    must = function(r){
+      return n(r.razvoz) - n(r.qr) - n(r.ret) - n(r.cons);
+    };
+  }
+  if (typeof itog === "function") {
+    itog = function(r){
+      return must(r) - cashSum(r) - expSum(r) - n(r.term) - paySum(r);
+    };
+  }
+
   function fmtDtLocal(iso){
     if(!iso) return "—";
     const d = new Date(iso);
@@ -30,10 +38,7 @@
   }
 
   function findTermAnchor(){
-    // insert payments block right after #c-term
-    const term = document.getElementById("c-term");
-    if(term) return term;
-    return null;
+    return document.getElementById("c-term");
   }
 
   function renderPaymentsBox(){
@@ -47,9 +52,6 @@
         <b>${fmt(p.sum)}</b>
         <button type="button" class="ghost" data-paydel="${i}" style="flex:0;padding:4px 8px">×</button>
       </div>`).join("");
-    const total = paySum(r);
-    const i = itog(r);
-    const left = i - total;
 
     let payEl = document.getElementById("c-payments");
     if(!payEl){
@@ -58,7 +60,6 @@
       payEl.style.marginTop = "8px";
       const term = findTermAnchor();
       if(term && term.parentNode){
-        // after term input
         if(term.nextSibling) term.parentNode.insertBefore(payEl, term.nextSibling);
         else term.parentNode.appendChild(payEl);
       } else {
@@ -66,7 +67,6 @@
         if(box) box.appendChild(payEl);
       }
     } else {
-      // keep under term if misplaced
       const term = findTermAnchor();
       if(term && term.parentNode && payEl.previousElementSibling !== term){
         if(term.nextSibling) term.parentNode.insertBefore(payEl, term.nextSibling);
@@ -77,7 +77,6 @@
     payEl.innerHTML = `
       <div style="margin-top:4px">
         ${rows}
-        <p style="margin:6px 0 0">Платежи <b>${fmt(total)}</b>${i>0?` · остаток <b>${fmt(left)}</b>`:""}</p>
         <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
           <input id="c-pay-sum" inputmode="numeric" placeholder="сумма" style="flex:1;min-width:90px">
           <input id="c-pay-at" type="datetime-local" style="flex:1;min-width:160px">
